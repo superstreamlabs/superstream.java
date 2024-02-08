@@ -67,8 +67,16 @@
     </dependency>
   </dependencies>
 
+  <distributionManagement>
+    <repository>
+    <id>superstream</id>
+      <name>Superstream Repository</name>
+      <url>https://github.com/memphisdev/superstream.java</url>
+    </repository>
+  </distributionManagement>
+
   <build>
-  <sourceDirectory>/Users/shay23bra/memphisdev/superstream.java/superstream/src/main/java</sourceDirectory>
+  <sourceDirectory>src/main/java</sourceDirectory>
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
        <plugin>
