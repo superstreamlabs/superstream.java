@@ -10,8 +10,8 @@ pipeline {
     stages {
         stage('Build') {          
             steps {
-                sh 'java -version'
-                // Add your build commands here
+                sh 'ls -la && pwd'
+
             }
         }
 
