@@ -8,19 +8,14 @@ pipeline {
     }    
 
     stages {
-        stage('Build') {          
+        stage('Build and Deploy') {
             steps {
-                sh 'ls -la && pwd'
-
+                withCredentials([file(credentialsId: 'maven-settings-file-superstream', variable: 'MAVEN_SETTINGS')]) {
+                    sh 'mvn -s $MAVEN_SETTINGS deploy'
+                }
             }
         }
 
-        stage('Test') {
-            steps {
-                sh 'echo "Run tests here"'
-                // Add your test commands here
-            }
-        }
     }
     post {
         always {
