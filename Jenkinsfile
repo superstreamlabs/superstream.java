@@ -11,8 +11,10 @@ pipeline {
         stage('Build and Deploy') {
             steps {
                 dir ('superstream'){
-                    withCredentials([file(credentialsId: 'maven-settings-file-superstream', variable: 'MAVEN_SETTINGS')]) {
-                        sh 'mvn -s $MAVEN_SETTINGS deploy'
+                     withCredentials([file(credentialsId: 'maven-settings-file-superstream', variable: 'MAVEN_SETTINGS')]) {
+                        // sh 'mvn -s $MAVEN_SETTINGS deploy'
+                        sh 'mvn -B package --file pom.xml'
+                       sh 'mvn -s $MAVEN_SETTINGS deploy'
                     }
                 }
             }
