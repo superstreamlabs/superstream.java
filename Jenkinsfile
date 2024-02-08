@@ -2,12 +2,15 @@ pipeline {
     agent {
         label 'memphis-jenkins-big-fleet,'
     }
+    agent {
+        docker {
+            label 'memphis-jenkins-big-fleet,'
+            image 'maven:3.8.4-openjdk-11'
+        }
+    }    
 
     stages {
-        stage('Build') {
-            agent {
-                    docker { image 'maven:3.8.4-openjdk-11' } // Use the Docker image as the agent for this stage
-                        }            
+        stage('Build') {          
             steps {
                 sh 'java -version'
                 // Add your build commands here
