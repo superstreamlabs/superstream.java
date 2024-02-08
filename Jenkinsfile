@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        label 'memphis-jenkins-big-fleet,'
-    }
+
     agent {
         docker {
             label 'memphis-jenkins-big-fleet,'
