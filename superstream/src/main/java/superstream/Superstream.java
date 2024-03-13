@@ -4,7 +4,6 @@ import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.DynamicMessage;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 import java.util.Properties;
 
 import com.google.protobuf.DescriptorProtos.DescriptorProto;
@@ -13,14 +12,8 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.FileDescriptor;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerInterceptor;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerInterceptor;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.Serializer;
+
 
 public class Superstream {
     private String token;
@@ -61,7 +54,7 @@ public class Superstream {
         return this.token != null;
     }
 
-    public void init(Properties props, byte[] descriptorAsBytes) { //TODO: remove descriptorAsBytes
+    public void init(Properties props) {
         try {
             if (token == null) {
                 throw new IllegalArgumentException("Token is required");
@@ -78,9 +71,9 @@ public class Superstream {
                 props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
                 props.put("original.serializer", serializerClass.getName());
             }
-            props.put("superstream.descriptor", descriptorAsBytes); //TODO: remove
-            props.put("superstream.host", superstreamHost);
-            props.put("superstream.token", token);
+            SuperstreamConnection superstreamConnection = new SuperstreamConnection(token, superstreamHost, learningFactor, false);
+            superstreamConnection.registerClient();
+            props.put("superstream.connection", superstreamConnection);
         } catch (Exception e) {
             e.printStackTrace();
         }

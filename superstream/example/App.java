@@ -1,4 +1,4 @@
-package superstream;
+package example;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -73,21 +73,20 @@ public class App
             properties.put("sasl.jaas.config", 
                 "org.apache.kafka.common.security.plain.PlainLoginModule required username='QCGAXYJ6BX5PKQJZ' password='ElBPc7P17zYceuIVYzEpU486OQbPNae444wBLFfs6nhOIBIhN5EcDR4CVqwmuw1u';");
 
-            properties.put("client.dns.lookup", "use_all_dns_ips");
 
-            properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "pkc-7xoy1.eu-central-1.aws.confluent.cloud:9092");
-            // Create a producer
-            KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
+
+            // properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "pkc-7xoy1.eu-central-1.aws.confluent.cloud:9092");
             // properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             // properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
             // properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             // properties.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group");
             // properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-            // Superstream superstream = new Superstream();
-            // superstream.setToken("token").setLearningFactor(0).setSuperstreamHost("");
+            Superstream superstream = new Superstream();
+            superstream.setToken("token").setLearningFactor(0).setSuperstreamHost("");
             // superstream.init(properties, descriptorBytes);
             // Superstream.initSuperstream(properties, descriptorBytes);
-            
+            // Create a producer
+            KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
 
             // // Produce some messages
             for (int i = 0; i < 1000; i++) {

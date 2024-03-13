@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-// import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 // import org.apache.kafka.clients.consumer.ConsumerRecord;
 // import org.apache.kafka.clients.consumer.KafkaConsumer;
 // import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -30,7 +30,7 @@ import java.io.File;
 public class App 
 {
     public static void main( String[] args ) {
-        // Descriptor descriptor = SomeMessage.getDescriptor();
+        // Descriptor descriptor = SomeMessage.getDescriptor(); 
         // DescriptorProto descriptorProto = descriptor.toProto();
 
         // byte[] descriptorBytes = descriptorProto.toByteArray();
@@ -48,13 +48,15 @@ public class App
         ObjectMapper mapper = new ObjectMapper();
 
         try{
-            File jsonFile = new File("/Users/shay23bra/memphisdev/superstream.java/superstream/src/test/java/superstream/message.json");
+            File jsonFile = new File("/Users/shay23bra/memphisdev/superstream.java/superstream/src/main/java/superstream/message.json");
             Map<String, Object> jsonMap = mapper.readValue(jsonFile, Map.class);
             String jsonString = mapper.writeValueAsString(jsonMap);
+            // Map<String,String> testMap = new HashMap<>();
+            // testMap.put("test", "test");
+            // String stringTestMAp = mapper.writeValueAsString(testMap);
             // byte[] jsonBytes = jsonString.getBytes(StandardCharsets.UTF_8);
             // byte[] msg = Interceptor.jsonToProto(jsonBytes, descriptorBytes);
             Properties properties = new Properties();
-            // properties.put(ProducerConfig. , "pkc-7xoy1.eu-central-1.aws.confluent.cloud:9092");
             properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             // properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
             properties.put("original.serializer", StringSerializer.class.getName());
@@ -71,31 +73,31 @@ public class App
             properties.put("security.protocol", "SASL_SSL");
             properties.put("sasl.mechanism", "PLAIN");
             properties.put("sasl.jaas.config", 
-                "org.apache.kafka.common.security.plain.PlainLoginModule required username='QCGAXYJ6BX5PKQJZ' password='ElBPc7P17zYceuIVYzEpU486OQbPNae444wBLFfs6nhOIBIhN5EcDR4CVqwmuw1u';");
-
+            "org.apache.kafka.common.security.plain.PlainLoginModule required username='OIDPBC4NBJ3JTX5J' password='l+IZatOGabtqKDrOsc/yTPhxRQo4BliVHBOi+lRxSOOSHWGaJinklZI6z6CNHc3B';");
             properties.put("client.dns.lookup", "use_all_dns_ips");
 
+
+
             properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "pkc-7xoy1.eu-central-1.aws.confluent.cloud:9092");
-            // Create a producer
-            KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
             // properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             // properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
             // properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             // properties.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group");
             // properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-            // Superstream superstream = new Superstream();
-            // superstream.setToken("token").setLearningFactor(0).setSuperstreamHost("");
+            Superstream superstream = new Superstream();
+            superstream.setToken("token").setLearningFactor(0).setSuperstreamHost("");
             // superstream.init(properties, descriptorBytes);
             // Superstream.initSuperstream(properties, descriptorBytes);
-            
+            // Create a producer
+            KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
 
             // // Produce some messages
             for (int i = 0; i < 1000; i++) {
+                producer.send(new ProducerRecord<>("shay_2", Integer.toString(i), jsonString));
+                System.out.println(i);
                 // ProducerRecord rec  = new ProducerRecord<>("java_json", Integer.toString(i), jsonBytes);
                 // rec.
                 // producer.send(new ProducerRecord<>("java_json", Integer.toString(i), jsonBytes));
-                producer.send(new ProducerRecord<>("shay_2", Integer.toString(i), jsonString));
-                System.out.println(i);
             }
 
             // Close the producer
