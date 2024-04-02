@@ -77,11 +77,19 @@
     </dependency>
   </dependencies>
 
-  <distributionManagement>
+  <!-- <distributionManagement>
     <repository>
     <id>superstream</id>
       <name>Superstream Repository</name>
       <url>https://github.com/memphisdev/superstream.java</url>
+    </repository>
+  </distributionManagement> -->
+
+    <distributionManagement>
+    <repository>
+    <id>github</id>
+      <name>GitHub Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/memphisdev/superstream.java</url>
     </repository>
   </distributionManagement>
 
