@@ -1,83 +1,102 @@
 package superstream;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.apache.kafka.common.serialization.Deserializer;
 
-import com.google.protobuf.DescriptorProtos.DescriptorProto;
-import com.google.protobuf.DescriptorProtos.FileDescriptorProto;
 import com.google.protobuf.Descriptors;
-import com.google.protobuf.Descriptors.FileDescriptor;
-import com.google.protobuf.DynamicMessage;
-import com.google.protobuf.util.JsonFormat;
+
+import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.Headers;
 
 public class SuperstreamDeserializer<T> implements Deserializer<T>{
-    private Deserializer<T> innerDeserializer;
-    private byte[] descriptorAsBytes; // TODO: remove
+    private Deserializer<T> originalDeserializer;
+    private Superstream superstreamConnection;
     
 
     public SuperstreamDeserializer() {
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
-        String innerDeserializerClassName = (String) configs.get("original.deserializer");
-        byte[] descriptorBytes = (byte[]) configs.get("superstream.descriptor");
-        descriptorAsBytes = descriptorBytes;
         try {
-            Class<?> innerDeserializerClass = Class.forName(innerDeserializerClassName);
-            innerDeserializer = (Deserializer<T>) innerDeserializerClass.getDeclaredConstructor().newInstance();
-            innerDeserializer.configure(configs, isKey);
+            String token  = configs.get("superstream.token")!= null ? (String) configs.get("superstream.token") : null;
+            if (token == null) {
+                throw new Exception("token is required");
+            }
+            String superstreamHost = configs.get("superstream.host")!= null ? (String) configs.get("superstream.host") : "broker.superstream.dev";
+            if (superstreamHost == null) {
+                superstreamHost = Consts.superstreamDefaultHost;
+            }
+            int learningFactor = configs.get("superstream.learning.factor")!= null ? (Integer) configs.get("superstream.learning.factor") : 20;
+            String originalDeserializerClassName = configs.get(Consts.originalDeserializer)!= null ? (String) configs.get(Consts.originalDeserializer) : null;
+            if (originalDeserializerClassName == null) {
+                throw new Exception("original deserializer is required");
+            }
+            Class<?> originalDeserializerClass = Class.forName(originalDeserializerClassName);
+            originalDeserializer = (Deserializer<T>) originalDeserializerClass.getDeclaredConstructor().newInstance();
+            originalDeserializer.configure(configs, isKey);
+            Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "consumer", configs);
+            superstreamConnection = superstreamConn;
+            superstreamConnection.config = configs;
         } catch (Exception e) {
-            e.printStackTrace();
+            String errMsg = String.format("superstream: error initializing superstream: %s", e.getMessage());
+            if (superstreamConnection != null) {
+                superstreamConnection.handleError(errMsg);
+            }
+            System.out.println(errMsg);
         }
     }
+
     @Override
     public T deserialize(String topic, byte[] data) {
-        byte[] dataToDesrialize;
-        try {
-            byte[] memphisSerialized = protoToJson(data, descriptorAsBytes); // TODO: remove descriptorAsBytes
-            dataToDesrialize = memphisSerialized;
-        } catch (Exception e) {
-            dataToDesrialize = data;
+        T deserializedData = originalDeserializer.deserialize(topic, data);
+        return deserializedData;
+    }
+
+    @Override
+    public T deserialize(String topic, Headers headers, byte[] data) {
+        String schemaId = null;
+        byte[] dataToDesrialize = data;
+        if (superstreamConnection != null){
+            superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);
         }
-        T deserializedData = innerDeserializer.deserialize(topic, dataToDesrialize);
-
-
+        Header header = headers.lastHeader("superstream_schema");
+        if (header != null) {
+            schemaId = new String(header.value(), StandardCharsets.UTF_8);
+        }
+        if (schemaId != null) {
+            Descriptors.Descriptor desc = superstreamConnection.SchemaIDMap.get(schemaId);
+            if (desc == null){
+                superstreamConnection.sendGetSchemaRequest(schemaId);
+                desc = superstreamConnection.SchemaIDMap.get(schemaId);
+                if (desc == null) {
+                    superstreamConnection.handleError("error getting schema with id: " + schemaId);
+                    System.out.println("superstream: shcema not found");
+                    return null;
+                }
+            }
+            try {
+                byte[] supertstreamDeserialized = superstreamConnection.protoToJson(data, desc);
+                dataToDesrialize = supertstreamDeserialized;
+                superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(supertstreamDeserialized.length);
+                superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyConsumed();
+            } catch (Exception e) {
+                superstreamConnection.handleError(String.format("error deserializing data: %s", e.getMessage()));
+                return null;
+            }
+        } else {
+            superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(data.length);
+            superstreamConnection.clientCounters.incrementTotalMessagesFailedConsume();
+        }
+        T deserializedData = originalDeserializer.deserialize(topic, dataToDesrialize);
         return deserializedData;
     }
 
     @Override
     public void close() {
-        innerDeserializer.close();
-        // TODO: close memphis resources if needed
-    }
-
-    public static byte[] protoToJson(byte[] msgBytes, byte[] descriptorAsBytes) throws IOException {
-    DescriptorProto descriptorProto = DescriptorProto.parseFrom(descriptorAsBytes);
-    FileDescriptorProto fileDescriptorProto = FileDescriptorProto.newBuilder()
-        .addMessageType(descriptorProto)
-        .build();
-        try {
-            FileDescriptor[] dependencies = {};
-            FileDescriptor fileDescriptor = FileDescriptor.buildFrom(fileDescriptorProto, dependencies);
-            Descriptors.Descriptor descriptor;
-            if (fileDescriptor.getMessageTypes().isEmpty()) {
-                throw new IllegalArgumentException("No message types found in the provided descriptor.");
-            } else {
-                descriptor = fileDescriptor.getMessageTypes().get(0);
-            }
-            DynamicMessage message = DynamicMessage.parseFrom(descriptor, msgBytes);
-            String jsonString = JsonFormat.printer().omittingInsignificantWhitespace().print(message);
-            return jsonString.getBytes(StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            if (e.getMessage().contains("the input ended unexpectedly")) {
-                return msgBytes;
-            }
-        }
-        return msgBytes;
+        originalDeserializer.close();
+        superstreamConnection.close();
     }
 }
