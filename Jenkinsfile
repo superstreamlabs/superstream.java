@@ -26,7 +26,9 @@ pipeline {
                     }
                 }                
                 dir ('superstream'){
-                    sh "sed -i 's|<version>[0-9]\\+\\.[0-9]\\+(-SNAPSHOT)</version>|<version>${env.versionTag}-SNAPSHOT</version>|' pom.xml"
+                    // sh "sed -i 's|<version>[0-9]\\+\\.[0-9]\\+(-SNAPSHOT)</version>|<version>${env.versionTag}-SNAPSHOT</version>|' pom.xml"
+                    sh "sed -i -r 's|<version>[0-9]+\\.[0-9]+(-SNAPSHOT)</version>|<version>${env.versionTag}-SNAPSHOT</version>|' pom.xml"
+
                     sh "cat pom.xml"
                      withCredentials([file(credentialsId: 'maven-settings-file-superstream', variable: 'MAVEN_SETTINGS')]) {
                        sh 'mvn -B package --file pom.xml'
