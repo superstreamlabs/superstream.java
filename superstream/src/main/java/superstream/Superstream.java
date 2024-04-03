@@ -149,7 +149,7 @@ public class Superstream {
                 Map<String, Object> replyData = mapper.readValue(reply.getData(), Map.class);
                 Object clientIDObject = replyData.get("client_id");
                 if (clientIDObject instanceof Integer) {
-                    clientID = (Integer) clientIDObject; // Directly cast if it's already an Integer
+                    clientID = (Integer) clientIDObject;
                 } else if (clientIDObject instanceof String) {
                     try {
                         clientID = Integer.parseInt((String) clientIDObject);
@@ -167,7 +167,7 @@ public class Superstream {
                 }
                 Object learningFactorObject = replyData.get("learning_factor");
                 if (learningFactorObject instanceof Integer) {
-                    learningFactor = (Integer) learningFactorObject; // Directly cast if it's already an Integer
+                    learningFactor = (Integer) learningFactorObject;
                 } else if (learningFactorObject instanceof String) {
                     try {
                         learningFactor = Integer.parseInt((String) learningFactorObject);
@@ -366,22 +366,30 @@ public class Superstream {
         Map<String, Object> superstreamConfig = new HashMap<>();
 
         // Producer configurations
-        // Note: Handling of `ProducerReturnErrors` and `ProducerReturnSuccesses` is typically done programmatically in the Java client
+        // Note: Handling of `producer_return_errors` and `producer_return_successes` is typically done programmatically in the Java client, `producer_flush_max_messages` does not exist in java
         mapIfPresent(javaConfig, ProducerConfig.MAX_REQUEST_SIZE_CONFIG, superstreamConfig, "producer_max_messages_bytes"); 
         mapIfPresent(javaConfig, ProducerConfig.ACKS_CONFIG, superstreamConfig, "producer_required_acks"); 
         mapIfPresent(javaConfig, ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, superstreamConfig, "producer_timeout"); 
         mapIfPresent(javaConfig, ProducerConfig.RETRIES_CONFIG, superstreamConfig, "producer_retry_max"); 
         mapIfPresent(javaConfig, ProducerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "producer_retry_backoff"); 
+        mapIfPresent(javaConfig, ProducerConfig.COMPRESSION_TYPE_CONFIG, superstreamConfig, "producer_compression_level");
         // Consumer configurations
+        // Note: `consumer_return_errors`, `consumer_offsets_initial`, `consumer_offsets_retry_max`, `consumer_group_rebalance_timeout`, `consumer_group_rebalance_retry_max` does not exist in java
         mapIfPresent(javaConfig, ConsumerConfig.FETCH_MIN_BYTES_CONFIG, superstreamConfig, "consumer_fetch_min"); 
         mapIfPresent(javaConfig, ConsumerConfig.FETCH_MAX_BYTES_CONFIG, superstreamConfig, "consumer_fetch_default"); 
         mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "consumer_retry_backoff"); 
         mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_max_wait_time"); 
         mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_RECORDS_CONFIG, superstreamConfig, "consumer_max_processing_time"); 
+        mapIfPresent(javaConfig, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, superstreamConfig, "consumer_offset_auto_commit_enable");
+        mapIfPresent(javaConfig, ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_offset_auto_commit_interval");
+        mapIfPresent(javaConfig, ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG , superstreamConfig, "consumer_group_session_timeout");
+        mapIfPresent(javaConfig, ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG , superstreamConfig, "consumer_group_heart_beat_interval");
+        mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG , superstreamConfig, "consumer_group_rebalance_retry_back_off");
+        mapIfPresent(javaConfig, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , superstreamConfig, "consumer_group_rebalance_reset_invalid_offsets");
+        mapIfPresent(javaConfig, ConsumerConfig.GROUP_ID_CONFIG , superstreamConfig, "consumer_group_id");
         // Common configurations
         mapIfPresent(javaConfig, ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, superstreamConfig, "servers"); 
-        mapIfPresent(javaConfig, ConsumerConfig.GROUP_ID_CONFIG, superstreamConfig, "consumer_group_id"); 
-
+        // Note: No access to `producer_topics_partitions` and `consumer_group_topics_partitions`
         return superstreamConfig;
     }
 
