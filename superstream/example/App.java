@@ -1,4 +1,4 @@
-package superstream;
+package example;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -47,9 +47,9 @@ public class App
             properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
             // Common Configs
-            properties.put("superstream.token", "token");
+            properties.put("superstream.token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2luZm8iOnsiYWNjb3VudF9pZCI6IjIyMzY3MTk5MSIsImVtYWlsIjoic2hheUBtZW1waGlzLmRldiIsImp3dCI6ImV5SjBlWEFpT2lKS1YxUWlMQ0poYkdjaU9pSmxaREkxTlRFNUxXNXJaWGtpZlEuZXlKcWRHa2lPaUpRTkRKQ1NWUXlORk15VkZWT1RWQlhVbEZTVjBOSVV6ZEhOMVUwU0RVMVIxYzJUMFZJV0RkS1drbEpSMWxEU1VwWFNEWlJJaXdpYVdGMElqb3hOekV3TWpRNU16azRMQ0pwYzNNaU9pSkJRVmhRUkZoSlJ6TXpURXMyTlZGTFZVSkdXVk5GUVRjeldreExSRmhHUkVWRlJ6WktVVU5XUkZsWFYwTTNTMXBRUjFaSFV6STJOU0lzSW01aGJXVWlPaUl5TWpNMk56RTVPVEVpTENKemRXSWlPaUpWUTFKRlVGaFFTMEZhUlUwM1ZsQk9XbFJMTjBSVU5rOU5XVXhLU0RSRFdGbzFTMGxZVTBzMlUwSTFOMU5HUjA0eVRGWlJURTlHV2lJc0ltNWhkSE1pT25zaWNIVmlJanA3ZlN3aWMzVmlJanA3ZlN3aWMzVmljeUk2TFRFc0ltUmhkR0VpT2kweExDSndZWGxzYjJGa0lqb3RNU3dpZEhsd1pTSTZJblZ6WlhJaUxDSjJaWEp6YVc5dUlqb3lmWDAuVWhJWmdfQldvVlRILTB4VWd2WjhCbWJEUjlQTlBORUFseVEyQXM2Wl9DNG9hVjdIdmpiMWpQNXI1alBQQ05OazBhVDlyR1RhQmNNaXo1cHpKSm5yQnciLCJua2V5IjoiU1VBT09UUUgyNE5aM1FRMkdDUjU2R1hIUFVPT1lOSUFYWTdNTk9LQTY0SktaNlZRUE1IUE81NEtLQSIsIm9yZ2FuaXphdGlvbl9uYW1lIjoic2hheSBvcmdhbml6YXRpb24ifX0.not5XTjNX2Xh_Kv84hTMOwmVQ9xSSz5AW3xVOLsn1uM");
             properties.put("superstream.learning.factor", 0);
-            properties.put("superstream.host", "host");
+            properties.put("superstream.host", "localhost:4223");
             properties.put("security.protocol", "SASL_SSL");
             properties.put("sasl.mechanism", "PLAIN");
             properties.put("sasl.jaas.config", 
