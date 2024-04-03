@@ -14,13 +14,10 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.protobuf.DescriptorProtos.DescriptorProto;
-import com.google.protobuf.DescriptorProtos.FileDescriptorProto;
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.DynamicMessage;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.DescriptorProtos;
 
@@ -30,12 +27,10 @@ import io.nats.client.Options;
 import io.nats.client.Subscription;
 import io.nats.client.api.ServerInfo;
 import io.nats.client.ConnectionListener;
-import io.nats.client.Consumer;
 import io.nats.client.Dispatcher;
 import io.nats.client.JetStream;
 import io.nats.client.Message;
 import io.nats.client.MessageHandler;
-
 public class Superstream {
     public  Connection brokerConnection;
     public JetStream jetstream;
