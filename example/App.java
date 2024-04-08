@@ -23,8 +23,6 @@ import org.omg.PortableInterceptor.Interceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.Descriptors.Descriptor;
 
-import superstream.Message.SomeMessage;
-
 import com.google.protobuf.DescriptorProtos.DescriptorProto;
 import java.io.File;
 

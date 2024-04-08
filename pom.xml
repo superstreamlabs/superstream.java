@@ -105,7 +105,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>superstream.Superstream</mainClass>
+                            <mainClass>Superstream</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
