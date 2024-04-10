@@ -18,22 +18,24 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
-            String token  = configs.get("superstream.token")!= null ? (String) configs.get("superstream.token") : null;
+            String token  = configs.get(Consts.superstreamTokenKey)!= null ? (String) configs.get(Consts.superstreamTokenKey) : null;
             if (token == null) {
                 throw new Exception("token is required");
             }
-            String superstreamHost = configs.get("superstream.host")!= null ? (String) configs.get("superstream.host") : "broker.superstream.dev";
+            String superstreamHost = configs.get(Consts.superstreamHostKey)!= null ? (String) configs.get(Consts.superstreamHostKey) : Consts.superstreamDefaultHost;
             if (superstreamHost == null) {
                 superstreamHost = Consts.superstreamDefaultHost;
             }
-            int learningFactor = configs.get("superstream.learning.factor")!= null ? (Integer) configs.get("superstream.learning.factor") : 20;
+            int learningFactor = configs.get(Consts.superstreamLearningFactorKey)!= null ? (Integer) configs.get(Consts.superstreamLearningFactorKey) : Consts.superstreamDefaultLearningFactor;
             String originalSerializerClassName = configs.get(Consts.originalSerializer)!= null ? (String) configs.get(Consts.originalSerializer) : null;
             if (originalSerializerClassName == null) {
                 throw new Exception("original serializer is required");
             }
             try {
                 Class<?> originalSerializerClass = Class.forName(originalSerializerClassName);
-                originalSerializer = (Serializer<T>) originalSerializerClass.getDeclaredConstructor().newInstance();
+                @SuppressWarnings("unchecked")
+                Serializer<T> originalSerializerT = (Serializer<T>) originalSerializerClass.getDeclaredConstructor().newInstance();
+                originalSerializer = originalSerializerT;
                 originalSerializer.configure(configs, isKey);
                 Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "producer", configs);
                 superstreamConnection = superstreamConn;

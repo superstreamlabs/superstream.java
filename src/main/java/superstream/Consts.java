@@ -15,4 +15,8 @@ public class Consts {
     public static final String superstreamRegisterSchemaSubject  = "internal_tasks.schema.registerSchema.%d";
     public static final String superstreamInternalUsername = "superstream_internal";
     public static final String superstreamGetSchemaSubject = "internal.schema.getSchema.%d";
+    public static final Integer superstreamDefaultLearningFactor = 20;
+    public static final String superstreamLearningFactorKey = "superstream.learning.factor";
+    public static final String superstreamHostKey = "superstream.host";
+    public static final String superstreamTokenKey = "superstream.token";
 }

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.Properties;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -142,6 +143,7 @@ public class Superstream {
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(30));
             if (reply != null) {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> replyData = mapper.readValue(reply.getData(), Map.class);
                 Object clientIDObject = replyData.get("client_id");
                 if (clientIDObject instanceof Integer) {
@@ -265,6 +267,7 @@ public class Superstream {
     private MessageHandler updatesHandler() {
         return (msg) -> {
             try {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> update = objectMapper.readValue(msg.getData(), Map.class);
                 processUpdate(update);
             } catch (IOException e) {
@@ -278,6 +281,7 @@ public class Superstream {
             try {
                 String payloadBytesString = (String) update.get("payload");
                 byte[] payloadBytes = Base64.getDecoder().decode(payloadBytesString);
+                @SuppressWarnings("unchecked")
                 Map<String, Object> payload = objectMapper.readValue(payloadBytes, Map.class);
                 String descriptorBytesString = (String) payload.get("desc");
                 String masterMsgName = (String) payload.get("master_msg_name");
@@ -301,6 +305,7 @@ public class Superstream {
             if (msg == null) {
                 throw new Exception("Could not get descriptor");
             }
+            @SuppressWarnings("unchecked")
             Map<String, Object> respMap = objectMapper.readValue(new String(msg.getData(), StandardCharsets.UTF_8), Map.class);
             if (respMap.containsKey("desc") && respMap.get("desc") instanceof String) {
                 String descriptorBytesString = (String) respMap.get("desc");
@@ -393,6 +398,72 @@ public class Superstream {
         if (javaConfig.containsKey(javaKey)) {
             superstreamConfig.put(superstreamKey, javaConfig.get(javaKey));
         }
+    }
+
+    public static Map<String, Object> initSuperstreamConfig(Map<String, Object> configs) {
+        if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
+            if (!configs.containsKey(Consts.originalDeserializer)) {
+                configs.put(Consts.originalDeserializer, configs.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+            }
+        }
+        if (configs.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
+            if (!configs.containsKey(Consts.originalSerializer)) {
+                configs.put(Consts.originalSerializer, configs.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+            }
+        }
+        
+        Map<String, String> envVars = System.getenv();
+        if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
+            configs.put(Consts.superstreamTokenKey, envVars.get("SUPERSTREAM_TOKEN"));
+        }
+        if (envVars.containsKey("SUPERSTREAM_HOST")) {
+            configs.put(Consts.superstreamHostKey, envVars.get("SUPERSTREAM_HOST"));
+        } else {
+            configs.put(Consts.superstreamHostKey, Consts.superstreamDefaultHost);
+        }
+        if (envVars.containsKey("SUPERSTREAM_LEARNING_FACTOR")) {
+            String learningFactorString = envVars.get("SUPERSTREAM_LEARNING_FACTOR");
+            Integer learningFactor = Integer.parseInt(learningFactorString);
+            configs.put(Consts.superstreamLearningFactorKey, learningFactor);
+        } else {
+            configs.put(Consts.superstreamLearningFactorKey, Consts.superstreamDefaultLearningFactor);
+        }
+        return configs;
+    }
+
+    public static Properties initSuperstreamProps(Properties properties) {
+        if (properties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
+            if (!properties.containsKey(Consts.originalDeserializer)) {
+                properties.put(Consts.originalDeserializer, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+            }
+        }
+        if (properties.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
+            if (!properties.containsKey(Consts.originalSerializer)) {
+                properties.put(Consts.originalSerializer, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+            }
+        }
+        
+        Map<String, String> envVars = System.getenv();
+        if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
+            properties.put(Consts.superstreamTokenKey, envVars.get("SUPERSTREAM_TOKEN"));
+        }
+        if (envVars.containsKey("SUPERSTREAM_HOST")) {
+            properties.put(Consts.superstreamHostKey, envVars.get("SUPERSTREAM_HOST"));
+        } else {
+            properties.put(Consts.superstreamHostKey, Consts.superstreamDefaultHost);
+        }
+        if (envVars.containsKey("SUPERSTREAM_LEARNING_FACTOR")) {
+            String learningFactorString = envVars.get("SUPERSTREAM_LEARNING_FACTOR");
+            Integer learningFactor = Integer.parseInt(learningFactorString);
+            properties.put(Consts.superstreamLearningFactorKey, learningFactor);
+        } else {
+            properties.put(Consts.superstreamLearningFactorKey, Consts.superstreamDefaultLearningFactor);
+        }
+        return properties;
     }
 }
 

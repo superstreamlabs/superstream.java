@@ -21,21 +21,23 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
-            String token  = configs.get("superstream.token")!= null ? (String) configs.get("superstream.token") : null;
+            String token  = configs.get(Consts.superstreamTokenKey)!= null ? (String) configs.get(Consts.superstreamTokenKey) : null;
             if (token == null) {
                 throw new Exception("token is required");
             }
-            String superstreamHost = configs.get("superstream.host")!= null ? (String) configs.get("superstream.host") : "broker.superstream.dev";
+            String superstreamHost = configs.get(Consts.superstreamHostKey)!= null ? (String) configs.get(Consts.superstreamHostKey) : Consts.superstreamDefaultHost;
             if (superstreamHost == null) {
                 superstreamHost = Consts.superstreamDefaultHost;
             }
-            int learningFactor = configs.get("superstream.learning.factor")!= null ? (Integer) configs.get("superstream.learning.factor") : 20;
+            int learningFactor = configs.get(Consts.superstreamLearningFactorKey)!= null ? (Integer) configs.get(Consts.superstreamLearningFactorKey) : Consts.superstreamDefaultLearningFactor;
             String originalDeserializerClassName = configs.get(Consts.originalDeserializer)!= null ? (String) configs.get(Consts.originalDeserializer) : null;
             if (originalDeserializerClassName == null) {
                 throw new Exception("original deserializer is required");
             }
             Class<?> originalDeserializerClass = Class.forName(originalDeserializerClassName);
-            originalDeserializer = (Deserializer<T>) originalDeserializerClass.getDeclaredConstructor().newInstance();
+            @SuppressWarnings("unchecked")
+            Deserializer<T> originalDeserializerT = (Deserializer<T>) originalDeserializerClass.getDeclaredConstructor().newInstance();
+            originalDeserializer = originalDeserializerT;
             originalDeserializer.configure(configs, isKey);
             Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "consumer", configs);
             superstreamConnection = superstreamConn;
