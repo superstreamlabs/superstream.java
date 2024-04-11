@@ -1,5 +1,6 @@
-package superstream;
+package example;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,11 +15,14 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import ai.superstream.Superstream;
 
-public class App 
+public class App
 {
     public static void main( String[] args ) {
         try{
@@ -26,27 +30,23 @@ public class App
 
             // Producer Configs
             properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-            properties.put("original.serializer", StringSerializer.class.getName());
-            properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
-            
+            properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+
             // Consumer Configs
             properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-            properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
-            properties.put("original.deserializer", StringDeserializer.class.getName());
+            properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             properties.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group23");
             properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
             // Common Configs
-            properties.put("superstream.token", "token");
-            properties.put("superstream.learning.factor", 0);
-            properties.put("superstream.host", "localhost:4223");
             properties.put("security.protocol", "SASL_SSL");
             properties.put("sasl.mechanism", "PLAIN");
-            properties.put("sasl.jaas.config", 
-            "org.apache.kafka.common.security.plain.PlainLoginModule required username='****' password='****';");
+            properties.put("sasl.jaas.config",
+                    "org.apache.kafka.common.security.plain.PlainLoginModule required username='****' password='****';");
             properties.put("client.dns.lookup", "use_all_dns_ips");
             properties.put("bootstrap.servers", "****");
-            
+
+            properties = Superstream.initSuperstreamProps(properties);
             // Create a producer
             KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
 
@@ -64,12 +64,12 @@ public class App
                 producer.send(new ProducerRecord<>("sample_topic", Integer.toString(i), jsonString));
             }
             producer.close();
-            
-            
+
+
 
             // Create a consumer
             KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
-            
+
 
             // Subscribe to topic
             consumer.subscribe(Collections.singletonList("javajava4"));

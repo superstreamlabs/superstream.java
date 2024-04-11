@@ -1,4 +1,4 @@
-package superstream;
+package ai.superstream;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;

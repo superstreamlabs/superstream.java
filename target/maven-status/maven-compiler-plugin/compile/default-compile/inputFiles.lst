@@ -1,6 +1,6 @@
-/Users/shay23bra/memphisdev/superstream.java/src/main/java/superstream/SuperstreamDeserializer.java
-/Users/shay23bra/memphisdev/superstream.java/src/main/java/superstream/NatsAuthHandler.java
-/Users/shay23bra/memphisdev/superstream.java/src/main/java/superstream/SuperstreamCounters.java
-/Users/shay23bra/memphisdev/superstream.java/src/main/java/superstream/Consts.java
-/Users/shay23bra/memphisdev/superstream.java/src/main/java/superstream/SuperstreamSerializer.java
-/Users/shay23bra/memphisdev/superstream.java/src/main/java/superstream/Superstream.java
+/Users/shay23bra/memphisdev/superstream.java/src/main/java/ai/superstream/SuperstreamCounters.java
+/Users/shay23bra/memphisdev/superstream.java/src/main/java/ai/superstream/Superstream.java
+/Users/shay23bra/memphisdev/superstream.java/src/main/java/ai/superstream/SuperstreamDeserializer.java
+/Users/shay23bra/memphisdev/superstream.java/src/main/java/ai/superstream/NatsAuthHandler.java
+/Users/shay23bra/memphisdev/superstream.java/src/main/java/ai/superstream/SuperstreamSerializer.java
+/Users/shay23bra/memphisdev/superstream.java/src/main/java/ai/superstream/Consts.java

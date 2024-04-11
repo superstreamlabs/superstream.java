@@ -1,4 +1,4 @@
-package superstream;
+package ai.superstream;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -10,7 +10,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 public class SuperstreamSerializer<T> implements Serializer<T>{
     private Serializer<T> originalSerializer;
-    private Superstream superstreamConnection;
+    private ai.superstream.Superstream superstreamConnection;
 
     public SuperstreamSerializer() {
     }
@@ -18,16 +18,16 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
-            String token  = configs.get(Consts.superstreamTokenKey)!= null ? (String) configs.get(Consts.superstreamTokenKey) : null;
+            String token  = configs.get(ai.superstream.Consts.superstreamTokenKey)!= null ? (String) configs.get(ai.superstream.Consts.superstreamTokenKey) : null;
             if (token == null) {
                 throw new Exception("token is required");
             }
-            String superstreamHost = configs.get(Consts.superstreamHostKey)!= null ? (String) configs.get(Consts.superstreamHostKey) : Consts.superstreamDefaultHost;
+            String superstreamHost = configs.get(ai.superstream.Consts.superstreamHostKey)!= null ? (String) configs.get(ai.superstream.Consts.superstreamHostKey) : ai.superstream.Consts.superstreamDefaultHost;
             if (superstreamHost == null) {
-                superstreamHost = Consts.superstreamDefaultHost;
+                superstreamHost = ai.superstream.Consts.superstreamDefaultHost;
             }
-            int learningFactor = configs.get(Consts.superstreamLearningFactorKey)!= null ? (Integer) configs.get(Consts.superstreamLearningFactorKey) : Consts.superstreamDefaultLearningFactor;
-            String originalSerializerClassName = configs.get(Consts.originalSerializer)!= null ? (String) configs.get(Consts.originalSerializer) : null;
+            int learningFactor = configs.get(ai.superstream.Consts.superstreamLearningFactorKey)!= null ? (Integer) configs.get(ai.superstream.Consts.superstreamLearningFactorKey) : ai.superstream.Consts.superstreamDefaultLearningFactor;
+            String originalSerializerClassName = configs.get(ai.superstream.Consts.originalSerializer)!= null ? (String) configs.get(Consts.originalSerializer) : null;
             if (originalSerializerClassName == null) {
                 throw new Exception("original serializer is required");
             }
@@ -37,7 +37,7 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
                 Serializer<T> originalSerializerT = (Serializer<T>) originalSerializerClass.getDeclaredConstructor().newInstance();
                 originalSerializer = originalSerializerT;
                 originalSerializer.configure(configs, isKey);
-                Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "producer", configs);
+                ai.superstream.Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "producer", configs);
                 superstreamConnection = superstreamConn;
                 superstreamConnection.config = configs;
             } catch (Exception e) {

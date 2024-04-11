@@ -1,4 +1,4 @@
-package superstream;
+package ai.superstream;
 
 import io.nats.client.AuthHandler;
 import io.nats.client.NKey;

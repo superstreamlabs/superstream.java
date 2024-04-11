@@ -20,15 +20,10 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.protobuf.Descriptors.Descriptor;
-
-import com.google.protobuf.DescriptorProtos.DescriptorProto;
 import java.io.File;
-import superstream.SuperstreamDeserializer;
-import superstream.SuperstreamSerializer;
-import superstream.Superstream;
+import ai.superstream.Superstream;
 
-public class App 
+public class App
 {
     public static void main( String[] args ) {
         try{
@@ -45,9 +40,6 @@ public class App
             properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
             // Common Configs
-            // properties.put("superstream.token", "token");
-            // properties.put("superstream.learning.factor", 0);
-            // properties.put("superstream.host", "localhost:4223");
             properties.put("security.protocol", "SASL_SSL");
             properties.put("sasl.mechanism", "PLAIN");
             properties.put("sasl.jaas.config", 

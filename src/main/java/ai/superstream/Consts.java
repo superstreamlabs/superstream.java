@@ -1,4 +1,4 @@
-package superstream;
+package ai.superstream;
 
 public class Consts {
     public static final String sdkVersion  = "1.0.0";
