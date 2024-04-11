@@ -4,7 +4,7 @@ pipeline {
         docker {
             label 'memphis-jenkins-big-fleet,'
             // image 'maven:3.8.4-openjdk-17'
-            image 'jelastic/maven:3.9.5-openjdk-21'
+            image 'maven:3.8.8-eclipse-temurin-21-alpine'
         }
     } 
 
