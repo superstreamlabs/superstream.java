@@ -5,7 +5,11 @@ pipeline {
             label 'memphis-jenkins-big-fleet,'
             image 'maven:3.8.4-openjdk-11'
         }
-    }    
+    } 
+
+    environment {
+            HOME = '/tmp'
+    }
 
     stages {
         stage('Build and Deploy') {
@@ -24,9 +28,19 @@ pipeline {
                         env.versionTag = version
                         echo "Using version from version.conf: ${env.versionTag}"                        
                     }
-                }                
-                sh "sed -i -r 's|<version>[0-9]+\\.[0-9]+(-SNAPSHOT)</version>|<version>${env.versionTag}-SNAPSHOT</version>|' pom.xml"
-                withCredentials([file(credentialsId: 'maven-settings-file-superstream', variable: 'MAVEN_SETTINGS')]) {
+                }
+                withCredentials([file(credentialsId: 'gpg-key', variable: 'GPG_KEY')]) {
+                                        //   gpg --batch --import $GPG_KEY
+                    sh '''
+                       echo 12345679 | gpg --batch --yes --passphrase-fd 0 --import $GPG_KEY
+
+                       echo "allow-loopback-pinentry" > /tmp/.gnupg/gpg-agent.conf
+                       echo RELOADAGENT | gpg-connect-agent 
+                       echo "D64C041FB68170463BE78AD7C4E3F1A8A5F0A659:6:" | gpg --import-ownertrust                      
+                    '''
+                }                                
+                // sh "sed -i -r 's|<version>[0-9]+\\.[0-9]+(-SNAPSHOT)</version>|<version>${env.versionTag}-SNAPSHOT</version>|' pom.xml"
+                withCredentials([file(credentialsId: 'settings-xml-superstream', variable: 'MAVEN_SETTINGS')]) {
                     sh 'mvn -B package --file pom.xml'
                     sh 'mvn -s $MAVEN_SETTINGS deploy'
                 }

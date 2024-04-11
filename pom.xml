@@ -4,13 +4,36 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>superstream</groupId>
-  <artifactId>superstream</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <groupId>ai.superstream</groupId>
+  <artifactId>superstream-java</artifactId>
+  <version>0.0.1-alpha1</version>
 
   <name>ai.superstream</name>
   <!-- FIXME change it to the project's website -->
   <url>http://www.example.com</url>
+  <description>Superstream Java SDK.</description>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>teammemphis</id>
+      <name>Team Memphis</name>
+      <email>team@memphis.dev</email>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com:memphisdev/superstream.java.git</connection>
+    <developerConnection>scm:git:ssh://github.com:memphisdev/superstream.java.git</developerConnection>
+    <url>https://superstream.ai</url>
+  </scm>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -97,65 +120,158 @@
 
     <distributionManagement>
     <repository>
-    <id>github</id>
-      <name>GitHub Apache Maven Packages</name>
-      <url>https://maven.pkg.github.com/memphisdev/superstream.java</url>
+    <id>ai.superstream</id>
+      <name>superstream</name>
+      <url>https://central.sonatype.com</url>
     </repository>
   </distributionManagement>
 
-  <build>
+<build>
   <sourceDirectory>src/main/java</sourceDirectory>
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
-      <plugins>
-       <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.0</version> <!-- Use the latest or a compatible version -->
+  <plugins>
+    <!-- maven-jar-plugin -->
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-jar-plugin</artifactId>
+      <version>3.2.0</version>
+      <configuration>
+        <archive>
+          <manifest>
+            <addClasspath>true</addClasspath>
+            <mainClass>Superstream</mainClass>
+          </manifest>
+        </archive>
+      </configuration>
+    </plugin>
+
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-source-plugin</artifactId>
+      <version>3.2.1</version> <!-- Use the latest version available -->
+      <executions>
+        <execution>
+          <id>attach-sources</id>
+          <phase>verify</phase>
+          <goals>
+            <goal>jar</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-javadoc-plugin</artifactId>
+      <version>3.3.1</version> <!-- Use the latest version -->
+      <executions>
+        <execution>
+          <goals>
+            <goal>jar</goal> <!-- Binds Javadoc generation to the package phase -->
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+
+
+
+    <!-- maven-clean-plugin -->
+    <plugin>
+      <artifactId>maven-clean-plugin</artifactId>
+      <version>3.1.0</version>
+    </plugin>
+
+    <!-- maven-resources-plugin -->
+    <plugin>
+      <artifactId>maven-resources-plugin</artifactId>
+      <version>3.0.2</version>
+    </plugin>
+
+    <!-- maven-compiler-plugin -->
+    <plugin>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <version>3.8.0</version>
+    </plugin>
+
+    <!-- maven-surefire-plugin -->
+    <plugin>
+      <artifactId>maven-surefire-plugin</artifactId>
+      <version>2.22.1</version>
+    </plugin>
+
+    <!-- maven-install-plugin -->
+    <plugin>
+      <artifactId>maven-install-plugin</artifactId>
+      <version>2.5.2</version>
+    </plugin>
+
+    <!-- central-publishing-maven-plugin -->
+    <plugin>
+      <groupId>org.sonatype.central</groupId>
+      <artifactId>central-publishing-maven-plugin</artifactId>
+      <version>0.4.0</version>
+      <executions>
+        <execution>
+          <phase>deploy</phase>
+          <goals>
+            <goal>publish</goal>
+          </goals>
+          <configuration>
+            <publishingServerId>central</publishingServerId>
+            <tokenAuth>true</tokenAuth>
+          </configuration>
+        </execution>
+      </executions>
+    </plugin>
+
+    <!-- Disabling the default maven-deploy-plugin -->
+    <plugin>
+      <artifactId>maven-deploy-plugin</artifactId>
+      <version>3.1.1</version>
+      <executions>
+        <execution>
+          <id>default-deploy</id>
+          <phase>none</phase>
+        </execution>
+      </executions>
+    </plugin>
+
+    <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.6</version>
+        <executions>
+            <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                    <goal>sign</goal>
+                </goals>
                 <configuration>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                            <mainClass>Superstream</mainClass>
-                        </manifest>
-                    </archive>
+                    <keyname>A5F0A659</keyname> <!-- Your GPG key ID -->
+                    <gpgArguments>
+                        <arg>--pinentry-mode</arg>
+                        <arg>loopback</arg>
+                        <arg>--batch</arg>
+                    </gpgArguments>
+                    <!-- It's better to handle the passphrase outside the pom.xml -->
+                    <!-- You can use environment variables or settings.xml to securely pass the passphrase -->
                 </configuration>
-        </plugin>
-        <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.1.0</version>
-        </plugin>
-        <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.8.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-install-plugin</artifactId>
-          <version>2.5.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>2.8.2</version>
-        </plugin>
-        <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
-        <plugin>
-          <artifactId>maven-site-plugin</artifactId>
-          <version>3.7.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-project-info-reports-plugin</artifactId>
-          <version>3.0.0</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
+            </execution>
+        </executions>
+    </plugin>
+
+    <!-- maven-site-plugin -->
+    <plugin>
+      <artifactId>maven-site-plugin</artifactId>
+      <version>3.7.1</version>
+    </plugin>
+
+    <!-- maven-project-info-reports-plugin -->
+    <plugin>
+      <artifactId>maven-project-info-reports-plugin</artifactId>
+      <version>3.0.0</version>
+    </plugin>
+  </plugins>
+</build>
+
 </project>
