@@ -103,11 +103,6 @@
       <artifactId>jnats</artifactId>
       <version>2.17.3</version> <!-- Check for the latest version -->
     </dependency>
-    <dependency>
-      <groupId>ai.superstream</groupId>
-      <artifactId>superstream-java</artifactId>
-      <version>0.0.1-alpha1</version>
-    </dependency>
   </dependencies>
 
   <!-- <distributionManagement>
