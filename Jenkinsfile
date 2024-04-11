@@ -32,8 +32,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'gpg-key', variable: 'GPG_KEY')]) {
                                         //   gpg --batch --import $GPG_KEY
                     sh '''
-                       echo 12345679 | gpg --batch --yes --passphrase-fd 0 --import $GPG_KEY
-
+                       gpg --batch --yes --passphrase-fd 0 --import $GPG_KEY
                        echo "allow-loopback-pinentry" > /tmp/.gnupg/gpg-agent.conf
                        echo RELOADAGENT | gpg-connect-agent 
                        echo "D64C041FB68170463BE78AD7C4E3F1A8A5F0A659:6:" | gpg --import-ownertrust                      
