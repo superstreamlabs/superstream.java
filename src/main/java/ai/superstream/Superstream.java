@@ -404,7 +404,7 @@ public class Superstream {
         if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
             if (!configs.containsKey(Consts.originalDeserializer)) {
                 configs.put(Consts.originalDeserializer, configs.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
-                configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ai.superstream.SuperstreamDeserializer.class.getName());
+                configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
             }
         }
         if (configs.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
