@@ -21,16 +21,16 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
-            String token  = configs.get(Consts.superstreamTokenKey)!= null ? (String) configs.get(Consts.superstreamTokenKey) : null;
+            String token  = configs.get(Consts.superstreamTokenKey) != null ? (String) configs.get(Consts.superstreamTokenKey) : null;
             if (token == null) {
                 throw new Exception("token is required");
             }
-            String superstreamHost = configs.get(Consts.superstreamHostKey)!= null ? (String) configs.get(Consts.superstreamHostKey) : Consts.superstreamDefaultHost;
+            String superstreamHost = configs.get(Consts.superstreamHostKey) != null ? (String) configs.get(Consts.superstreamHostKey) : Consts.superstreamDefaultHost;
             if (superstreamHost == null) {
                 superstreamHost = Consts.superstreamDefaultHost;
             }
-            int learningFactor = configs.get(Consts.superstreamLearningFactorKey)!= null ? (Integer) configs.get(Consts.superstreamLearningFactorKey) : Consts.superstreamDefaultLearningFactor;
-            String originalDeserializerClassName = configs.get(Consts.originalDeserializer)!= null ? (String) configs.get(Consts.originalDeserializer) : null;
+            int learningFactor = configs.get(Consts.superstreamLearningFactorKey) != null ? (Integer) configs.get(Consts.superstreamLearningFactorKey) : Consts.superstreamDefaultLearningFactor;
+            String originalDeserializerClassName = configs.get(Consts.originalDeserializer) != null ? (String) configs.get(Consts.originalDeserializer) : null;
             if (originalDeserializerClassName == null) {
                 throw new Exception("original deserializer is required");
             }
@@ -40,8 +40,8 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
             originalDeserializer = originalDeserializerT;
             originalDeserializer.configure(configs, isKey);
             Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "consumer", configs);
+            superstreamConn.init();
             superstreamConnection = superstreamConn;
-            superstreamConnection.config = configs;
         } catch (Exception e) {
             String errMsg = String.format("superstream: error initializing superstream: %s", e.getMessage());
             if (superstreamConnection != null) {

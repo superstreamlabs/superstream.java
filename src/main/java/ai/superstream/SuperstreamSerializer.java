@@ -38,8 +38,8 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
                 originalSerializer = originalSerializerT;
                 originalSerializer.configure(configs, isKey);
                 Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "producer", configs);
+                superstreamConn.init();
                 superstreamConnection = superstreamConn;
-                superstreamConnection.config = configs;
             } catch (Exception e) {
                 throw e;
             }

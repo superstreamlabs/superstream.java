@@ -50,12 +50,22 @@ public class Superstream {
     public String ProducerSchemaID = "0";
     public String ConsumerSchemaID = "0";
     public Map<String, Descriptors.Descriptor> SchemaIDMap = new HashMap<>();
-    public Map<String,?> config;
+    public Map<String,?> configs;
     public SuperstreamCounters clientCounters = new SuperstreamCounters();
     private Subscription subscription;
+    private String host;
+    private String token;
+    public String type;
 
-    public Superstream(String token, String host, Integer learnfactor, String type, Map<String, ?> configs) {
-        learningFactor = learnfactor;
+    public Superstream(String token, String host, Integer learningFactor, String type, Map<String, ?> configs) {
+        this.learningFactor = learningFactor;
+        this.token = token;
+        this.host = host;
+        this.configs = configs;
+        this.type = type;
+    }
+
+    public void init() {
         try {
             initializeNatsConnection(token, host);
             registerClient(configs);
