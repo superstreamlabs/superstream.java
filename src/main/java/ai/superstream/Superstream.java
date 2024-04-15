@@ -52,10 +52,11 @@ public class Superstream {
     public Map<String, Descriptors.Descriptor> SchemaIDMap = new HashMap<>();
     public Map<String,?> configs;
     public SuperstreamCounters clientCounters = new SuperstreamCounters();
-    private Subscription subscription;
+    private Subscription updatesSubscription;
     private String host;
     private String token;
     public String type;
+    public Boolean reductionEnabled = false;
 
     public Superstream(String token, String host, Integer learningFactor, String type, Map<String, ?> configs) {
         this.learningFactor = learningFactor;
@@ -210,7 +211,7 @@ public class Superstream {
         try {
             String subject = String.format(Consts.superstreamUpdatesSubject, clientID);
             Dispatcher dispatcher = brokerConnection.createDispatcher(this.updatesHandler());
-            subscription = dispatcher.subscribe(subject, this.updatesHandler());
+            updatesSubscription = dispatcher.subscribe(subject, this.updatesHandler());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -287,21 +288,33 @@ public class Superstream {
     }
 
     private void processUpdate(Map<String, Object> update) {
-        if ("LearnedSchema".equals(update.get("type"))) {
-            try {
-                String payloadBytesString = (String) update.get("payload");
-                byte[] payloadBytes = Base64.getDecoder().decode(payloadBytesString);
-                @SuppressWarnings("unchecked")
-                Map<String, Object> payload = objectMapper.readValue(payloadBytes, Map.class);
-                String descriptorBytesString = (String) payload.get("desc");
-                String masterMsgName = (String) payload.get("master_msg_name");
-                String fileName = (String) payload.get("file_name");
-                descriptor = compileMsgDescriptor(descriptorBytesString, masterMsgName, fileName);
-                String schemaID = (String) payload.get("schema_id");
-                ProducerSchemaID = schemaID;
-            } catch (Exception e) {
-                handleError(("processUpdate: " + e.getMessage()));
-            }
+        String type = (String) update.get("type");
+        try {
+            String payloadBytesString = (String) update.get("payload");
+            byte[] payloadBytes = Base64.getDecoder().decode(payloadBytesString);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = objectMapper.readValue(payloadBytes, Map.class);
+            switch (type) {
+                case "LearnedSchema":
+                    String descriptorBytesString = (String) payload.get("desc");
+                    String masterMsgName = (String) payload.get("master_msg_name");
+                    String fileName = (String) payload.get("file_name");
+                    descriptor = compileMsgDescriptor(descriptorBytesString, masterMsgName, fileName);
+                    String schemaID = (String) payload.get("schema_id");
+                    ProducerSchemaID = schemaID;
+                    break;
+                    
+                case "ToggleReduction":
+                    Boolean enableReduction = (Boolean) payload.get("enable_reduction");
+                    if (enableReduction) {
+                        this.reductionEnabled = true;
+                    } else {
+                        this.reductionEnabled = false;
+                    }
+                    break;
+                }
+        } catch (Exception e) {
+            handleError(("processUpdate: " + e.getMessage()));
         }
     }
 
