@@ -239,8 +239,6 @@
                 <configuration>
                     <keyname>A5F0A659</keyname> <!-- Your GPG key ID -->
                     <gpgArguments>
-                       <!-- <arg>--pinentry-mode</arg>
-                        <arg>loopback</arg> -->
                         <arg>--batch</arg>
                     </gpgArguments>
                     <!-- It's better to handle the passphrase outside the pom.xml -->
