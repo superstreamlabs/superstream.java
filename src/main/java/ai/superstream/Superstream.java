@@ -64,6 +64,7 @@ public class Superstream {
         this.host = host;
         this.configs = configs;
         this.type = type;
+        this.reductionEnabled = false;
     }
 
     public void init() {
