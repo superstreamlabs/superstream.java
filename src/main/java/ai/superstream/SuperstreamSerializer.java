@@ -62,7 +62,7 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
     public byte[] serialize(String topic, Headers headers, T data) {
         byte[] serializedData = this.originalSerializer.serialize(topic, data);
         byte[] serializedResult;
-        if (superstreamConnection != null && superstreamConnection.reductionEnabled) {
+        if (superstreamConnection != null && superstreamConnection.reductionEnabled == true) {
             if (superstreamConnection.descriptor != null){
                 try {
                     Header header = new RecordHeader("superstream_schema",  superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
