@@ -37,11 +37,11 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
             Class<?> originalDeserializerClass = Class.forName(originalDeserializerClassName);
             @SuppressWarnings("unchecked")
             Deserializer<T> originalDeserializerT = (Deserializer<T>) originalDeserializerClass.getDeclaredConstructor().newInstance();
-            originalDeserializer = originalDeserializerT;
-            originalDeserializer.configure(configs, isKey);
+            this.originalDeserializer = originalDeserializerT;
+            this.originalDeserializer.configure(configs, isKey);
             Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "consumer", configs);
             superstreamConn.init();
-            superstreamConnection = superstreamConn;
+            this.superstreamConnection = superstreamConn;
         } catch (Exception e) {
             String errMsg = String.format("superstream: error initializing superstream: %s", e.getMessage());
             if (superstreamConnection != null) {
@@ -92,7 +92,7 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
             superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(data.length);
             superstreamConnection.clientCounters.incrementTotalMessagesFailedConsume();
         }
-        T deserializedData = originalDeserializer.deserialize(topic, dataToDesrialize);
+        T deserializedData = this.originalDeserializer.deserialize(topic, dataToDesrialize);
         return deserializedData;
     }
 

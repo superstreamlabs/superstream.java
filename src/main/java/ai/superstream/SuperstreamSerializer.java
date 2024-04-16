@@ -35,11 +35,11 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
                 Class<?> originalSerializerClass = Class.forName(originalSerializerClassName);
                 @SuppressWarnings("unchecked")
                 Serializer<T> originalSerializerT = (Serializer<T>) originalSerializerClass.getDeclaredConstructor().newInstance();
-                originalSerializer = originalSerializerT;
-                originalSerializer.configure(configs, isKey);
+                this.originalSerializer = originalSerializerT;
+                this.originalSerializer.configure(configs, isKey);
                 Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "producer", configs);
                 superstreamConn.init();
-                superstreamConnection = superstreamConn;
+                this.superstreamConnection = superstreamConn;
             } catch (Exception e) {
                 throw e;
             }
@@ -60,7 +60,7 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
 
     @Override
     public byte[] serialize(String topic, Headers headers, T data) {
-        byte[] serializedData = originalSerializer.serialize(topic, data);
+        byte[] serializedData = this.originalSerializer.serialize(topic, data);
         byte[] serializedResult;
         if (superstreamConnection != null && superstreamConnection.reductionEnabled) {
             if (superstreamConnection.descriptor != null){
