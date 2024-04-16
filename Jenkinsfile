@@ -18,7 +18,7 @@ pipeline {
                 script {
                     def branchName = env.BRANCH_NAME ?: ''
                     // Check if the branch is 'latest'
-                    if (branchName == 'add-versioning') {
+                    if (branchName == 'modify-to-new-usage') {
                         // Read version from version-beta.conf
                         def version = readFile('version-beta.conf').trim()
                         // Set the VERSION environment variable to the version from the file
