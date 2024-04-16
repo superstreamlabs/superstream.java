@@ -18,7 +18,7 @@ pipeline {
                 script {
                     def branchName = env.BRANCH_NAME ?: ''
                     // Check if the branch is 'latest'
-                    if (branchName == 'master') {
+                    if (branchName == 'add-versioning') {
                         // Read version from version-beta.conf
                         def version = readFile('version-beta.conf').trim()
                         // Set the VERSION environment variable to the version from the file
@@ -40,8 +40,9 @@ pipeline {
                 }                                
                 // sh "sed -i -r 's|<version>[0-9]+\\.[0-9]+(-SNAPSHOT)</version>|<version>${env.versionTag}-SNAPSHOT</version>|' pom.xml"
                 withCredentials([file(credentialsId: 'settings-xml-superstream', variable: 'MAVEN_SETTINGS')]) {
-                    sh 'mvn -B package --file pom.xml'
-                    sh 'mvn -s $MAVEN_SETTINGS deploy'
+                    sh "mvn -B package --file pom.xml"
+                    sh "mvn versions:set -DnewVersion=${env.versionTag}"
+                    sh "mvn -s $MAVEN_SETTINGS deploy"
                 }
                 
             }
