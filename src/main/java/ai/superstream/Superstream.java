@@ -56,15 +56,15 @@ public class Superstream {
     private String host;
     private String token;
     public String type;
-    public Boolean reductionEnabled = false;
+    public Boolean reductionEnabled;
 
-    public Superstream(String token, String host, Integer learningFactor, String type, Map<String, ?> configs) {
+    public Superstream(String token, String host, Integer learningFactor, String type, Map<String, ?> configs, Boolean enableReduction) {
         this.learningFactor = learningFactor;
         this.token = token;
         this.host = host;
         this.configs = configs;
         this.type = type;
-        this.reductionEnabled = false;
+        this.reductionEnabled = enableReduction;
     }
 
     public void init() {
@@ -453,6 +453,13 @@ public class Superstream {
             configs.put(Consts.superstreamLearningFactorKey, learningFactor);
         } else {
             configs.put(Consts.superstreamLearningFactorKey, Consts.superstreamDefaultLearningFactor);
+        }
+        if (envVars.containsKey("SUPERSTREAM_REDUCTION_ENABLED")) {
+            String reductionEnabledString = envVars.get("SUPERSTREAM_REDUCTION_ENABLED");
+            Boolean reductionEnabled = Boolean.parseBoolean(reductionEnabledString);
+            configs.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
+        } else {
+            configs.put(Consts.superstreamReductionEnabledKey, false);
         }
         return configs;
     }

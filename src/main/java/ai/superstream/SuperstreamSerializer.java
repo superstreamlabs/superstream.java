@@ -36,8 +36,9 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
                 superstreamHost = Consts.superstreamDefaultHost;
             }
             int learningFactor = configs.get(Consts.superstreamLearningFactorKey)!= null ? (Integer) configs.get(Consts.superstreamLearningFactorKey) : Consts.superstreamDefaultLearningFactor;
+            Boolean enableReduction = configs.get(Consts.superstreamReductionEnabledKey) != null ? (Boolean) configs.get(Consts.superstreamReductionEnabledKey) : false;
             try {
-                Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "producer", configs);
+                Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "producer", configs, enableReduction);
                 superstreamConn.init();
                 this.superstreamConnection = superstreamConn;
             } catch (Exception e) {

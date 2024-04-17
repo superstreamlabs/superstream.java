@@ -39,7 +39,8 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
                 superstreamHost = Consts.superstreamDefaultHost;
             }
             int learningFactor = configs.get(Consts.superstreamLearningFactorKey) != null ? (Integer) configs.get(Consts.superstreamLearningFactorKey) : Consts.superstreamDefaultLearningFactor;
-            Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "consumer", configs);
+            Boolean enableReduction = configs.get(Consts.superstreamReductionEnabledKey) != null ? (Boolean) configs.get(Consts.superstreamReductionEnabledKey) : false;
+            Superstream superstreamConn = new Superstream(token, superstreamHost, learningFactor, "consumer", configs, enableReduction);
             superstreamConn.init();
             this.superstreamConnection = superstreamConn;
         } catch (Exception e) {
