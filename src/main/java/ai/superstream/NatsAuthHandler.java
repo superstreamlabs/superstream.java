@@ -1,4 +1,4 @@
-package superstream;
+package ai.superstream;
 
 import io.nats.client.AuthHandler;
 import io.nats.client.NKey;
@@ -7,7 +7,7 @@ public class NatsAuthHandler implements AuthHandler {
     private final String jwt;
     private final NKey nkey;
 
-    public NatsAuthHandler(String jwt, String nkeySeed) throws Exception {
+    public NatsAuthHandler(String jwt, String nkeySeed) {
         this.jwt = jwt;
         this.nkey = NKey.fromSeed(nkeySeed.toCharArray());
     }

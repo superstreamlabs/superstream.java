@@ -1,4 +1,4 @@
-package superstream;
+package ai.superstream;
 
 public class SuperstreamCounters {
     public long TotalBytesBeforeReduction = 0;

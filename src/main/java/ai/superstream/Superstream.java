@@ -1,4 +1,4 @@
-package superstream;
+package ai.superstream;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.Properties;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -49,12 +50,24 @@ public class Superstream {
     public String ProducerSchemaID = "0";
     public String ConsumerSchemaID = "0";
     public Map<String, Descriptors.Descriptor> SchemaIDMap = new HashMap<>();
-    public Map<String,?> config;
+    public Map<String,?> configs;
     public SuperstreamCounters clientCounters = new SuperstreamCounters();
-    private Subscription subscription;
+    private Subscription updatesSubscription;
+    private String host;
+    private String token;
+    public String type;
+    public Boolean reductionEnabled;
 
-    public Superstream(String token, String host, Integer learnfactor, String type, Map<String, ?> configs) {
-        learningFactor = learnfactor;
+    public Superstream(String token, String host, Integer learningFactor, String type, Map<String, ?> configs, Boolean enableReduction) {
+        this.learningFactor = learningFactor;
+        this.token = token;
+        this.host = host;
+        this.configs = configs;
+        this.type = type;
+        this.reductionEnabled = enableReduction;
+    }
+
+    public void init() {
         try {
             initializeNatsConnection(token, host);
             registerClient(configs);
@@ -142,6 +155,7 @@ public class Superstream {
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(30));
             if (reply != null) {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> replyData = mapper.readValue(reply.getData(), Map.class);
                 Object clientIDObject = replyData.get("client_id");
                 if (clientIDObject instanceof Integer) {
@@ -198,7 +212,7 @@ public class Superstream {
         try {
             String subject = String.format(Consts.superstreamUpdatesSubject, clientID);
             Dispatcher dispatcher = brokerConnection.createDispatcher(this.updatesHandler());
-            subscription = dispatcher.subscribe(subject, this.updatesHandler());
+            updatesSubscription = dispatcher.subscribe(subject, this.updatesHandler());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -265,6 +279,7 @@ public class Superstream {
     private MessageHandler updatesHandler() {
         return (msg) -> {
             try {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> update = objectMapper.readValue(msg.getData(), Map.class);
                 processUpdate(update);
             } catch (IOException e) {
@@ -274,20 +289,33 @@ public class Superstream {
     }
 
     private void processUpdate(Map<String, Object> update) {
-        if ("LearnedSchema".equals(update.get("type"))) {
-            try {
-                String payloadBytesString = (String) update.get("payload");
-                byte[] payloadBytes = Base64.getDecoder().decode(payloadBytesString);
-                Map<String, Object> payload = objectMapper.readValue(payloadBytes, Map.class);
-                String descriptorBytesString = (String) payload.get("desc");
-                String masterMsgName = (String) payload.get("master_msg_name");
-                String fileName = (String) payload.get("file_name");
-                descriptor = compileMsgDescriptor(descriptorBytesString, masterMsgName, fileName);
-                String schemaID = (String) payload.get("schema_id");
-                ProducerSchemaID = schemaID;
-            } catch (Exception e) {
-                handleError(("processUpdate: " + e.getMessage()));
-            }
+        String type = (String) update.get("type");
+        try {
+            String payloadBytesString = (String) update.get("payload");
+            byte[] payloadBytes = Base64.getDecoder().decode(payloadBytesString);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = objectMapper.readValue(payloadBytes, Map.class);
+            switch (type) {
+                case "LearnedSchema":
+                    String descriptorBytesString = (String) payload.get("desc");
+                    String masterMsgName = (String) payload.get("master_msg_name");
+                    String fileName = (String) payload.get("file_name");
+                    descriptor = compileMsgDescriptor(descriptorBytesString, masterMsgName, fileName);
+                    String schemaID = (String) payload.get("schema_id");
+                    ProducerSchemaID = schemaID;
+                    break;
+                    
+                case "ToggleReduction":
+                    Boolean enableReduction = (Boolean) payload.get("enable_reduction");
+                    if (enableReduction) {
+                        this.reductionEnabled = true;
+                    } else {
+                        this.reductionEnabled = false;
+                    }
+                    break;
+                }
+        } catch (Exception e) {
+            handleError(("processUpdate: " + e.getMessage()));
         }
     }
 
@@ -301,6 +329,7 @@ public class Superstream {
             if (msg == null) {
                 throw new Exception("Could not get descriptor");
             }
+            @SuppressWarnings("unchecked")
             Map<String, Object> respMap = objectMapper.readValue(new String(msg.getData(), StandardCharsets.UTF_8), Map.class);
             if (respMap.containsKey("desc") && respMap.get("desc") instanceof String) {
                 String descriptorBytesString = (String) respMap.get("desc");
@@ -376,12 +405,12 @@ public class Superstream {
         mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "consumer_retry_backoff"); 
         mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_max_wait_time"); 
         mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_RECORDS_CONFIG, superstreamConfig, "consumer_max_processing_time"); 
-        mapIfPresent(javaConfig, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, superstreamConfig, "consumer_offset_auto_commit_enable");
+        // mapIfPresent(javaConfig, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, superstreamConfig, "consumer_offset_auto_commit_enable"); // TODO: handle boolean vars
         mapIfPresent(javaConfig, ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_offset_auto_commit_interval");
         mapIfPresent(javaConfig, ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG , superstreamConfig, "consumer_group_session_timeout");
         mapIfPresent(javaConfig, ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG , superstreamConfig, "consumer_group_heart_beat_interval");
         mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG , superstreamConfig, "consumer_group_rebalance_retry_back_off");
-        mapIfPresent(javaConfig, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , superstreamConfig, "consumer_group_rebalance_reset_invalid_offsets");
+        // mapIfPresent(javaConfig, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , superstreamConfig, "consumer_group_rebalance_reset_invalid_offsets"); // TODO: handle boolean vars
         mapIfPresent(javaConfig, ConsumerConfig.GROUP_ID_CONFIG , superstreamConfig, "consumer_group_id");
         // Common configurations
         mapIfPresent(javaConfig, ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, superstreamConfig, "servers"); 
@@ -393,6 +422,79 @@ public class Superstream {
         if (javaConfig.containsKey(javaKey)) {
             superstreamConfig.put(superstreamKey, javaConfig.get(javaKey));
         }
+    }
+
+    public static Map<String, Object> initSuperstreamConfig(Map<String, Object> configs) {
+        if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
+            if (!configs.containsKey(Consts.originalDeserializer)) {
+                configs.put(Consts.originalDeserializer, configs.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+            }
+        }
+        if (configs.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
+            if (!configs.containsKey(Consts.originalSerializer)) {
+                configs.put(Consts.originalSerializer, configs.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+            }
+        }
+        
+        Map<String, String> envVars = System.getenv();
+        if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
+            configs.put(Consts.superstreamTokenKey, envVars.get("SUPERSTREAM_TOKEN"));
+        }
+        if (envVars.containsKey("SUPERSTREAM_HOST")) {
+            configs.put(Consts.superstreamHostKey, envVars.get("SUPERSTREAM_HOST"));
+        } else {
+            configs.put(Consts.superstreamHostKey, Consts.superstreamDefaultHost);
+        }
+        if (envVars.containsKey("SUPERSTREAM_LEARNING_FACTOR")) {
+            String learningFactorString = envVars.get("SUPERSTREAM_LEARNING_FACTOR");
+            Integer learningFactor = Integer.parseInt(learningFactorString);
+            configs.put(Consts.superstreamLearningFactorKey, learningFactor);
+        } else {
+            configs.put(Consts.superstreamLearningFactorKey, Consts.superstreamDefaultLearningFactor);
+        }
+        if (envVars.containsKey("SUPERSTREAM_REDUCTION_ENABLED")) {
+            String reductionEnabledString = envVars.get("SUPERSTREAM_REDUCTION_ENABLED");
+            Boolean reductionEnabled = Boolean.parseBoolean(reductionEnabledString);
+            configs.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
+        } else {
+            configs.put(Consts.superstreamReductionEnabledKey, false);
+        }
+        return configs;
+    }
+
+    public static Properties initSuperstreamProps(Properties properties) {
+        if (properties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
+            if (!properties.containsKey(Consts.originalDeserializer)) {
+                properties.put(Consts.originalDeserializer, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+            }
+        }
+        if (properties.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
+            if (!properties.containsKey(Consts.originalSerializer)) {
+                properties.put(Consts.originalSerializer, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+            }
+        }
+        
+        Map<String, String> envVars = System.getenv();
+        if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
+            properties.put(Consts.superstreamTokenKey, envVars.get("SUPERSTREAM_TOKEN"));
+        }
+        if (envVars.containsKey("SUPERSTREAM_HOST")) {
+            properties.put(Consts.superstreamHostKey, envVars.get("SUPERSTREAM_HOST"));
+        } else {
+            properties.put(Consts.superstreamHostKey, Consts.superstreamDefaultHost);
+        }
+        if (envVars.containsKey("SUPERSTREAM_LEARNING_FACTOR")) {
+            String learningFactorString = envVars.get("SUPERSTREAM_LEARNING_FACTOR");
+            Integer learningFactor = Integer.parseInt(learningFactorString);
+            properties.put(Consts.superstreamLearningFactorKey, learningFactor);
+        } else {
+            properties.put(Consts.superstreamLearningFactorKey, Consts.superstreamDefaultLearningFactor);
+        }
+        return properties;
     }
 }
 
