@@ -42,7 +42,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'settings-xml-superstream', variable: 'MAVEN_SETTINGS')]) {
                     sh "mvn -B package --file pom.xml"
                     sh "mvn versions:set -DnewVersion=${env.versionTag}"
-                    sh "mvn -s $MAVEN_SETTINGS deploy"
+                    sh "mvn -s $MAVEN_SETTINGS deploy -DautoPublish=true"
                 }
                 
             }
