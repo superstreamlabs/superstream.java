@@ -3,7 +3,7 @@ pipeline {
     agent {
         docker {
             label 'memphis-jenkins-big-fleet,'
-            image 'maven:3.8.4-openjdk-17'
+            image 'memphisos/maven-jdk-21:1.0'
         }
     } 
 
@@ -30,6 +30,12 @@ pipeline {
                         env.versionTag = version
                         echo "Using version from version.conf: ${env.versionTag}"                        
                     }
+                    if (branchName == 'update-plugins') {
+                        def version = readFile('version-alpha.conf').trim()
+                        env.versionTag = version
+                        echo "Using version from version.conf: ${env.versionTag}"                        
+                    }                    
+                    
                 }
                 withCredentials([file(credentialsId: 'gpg-key', variable: 'GPG_KEY')]) {
                                         //   gpg --batch --import $GPG_KEY

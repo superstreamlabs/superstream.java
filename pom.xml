@@ -6,7 +6,7 @@
 
   <groupId>ai.superstream</groupId>
   <artifactId>superstream-java</artifactId>
-  <version>version</version>
+  <version>0.0.1-alpha25</version>
 
   <name>ai.superstream</name>
   <!-- FIXME change it to the project's website -->
@@ -37,8 +37,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target> 
   </properties>
 
   <dependencies>
@@ -51,52 +51,52 @@
     <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java-util</artifactId>
-        <version>3.19.1</version>
+        <version>4.0.0-rc-2</version>
     </dependency>
     <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
-        <version>3.19.1</version>
+        <version>4.0.0-rc-2</version>
     </dependency>
     <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
-        <version>2.8.8</version>
+        <version>2.10.1</version>
     </dependency>
     <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
-        <version>2.16.1</version>
+        <version>2.17.0</version>
     </dependency>
     <dependency>
         <groupId>org.apache.kafka</groupId>
         <artifactId>kafka-clients</artifactId>
-        <version>3.1.0</version>
+        <version>3.7.0</version>
     </dependency>
     <dependency>
         <groupId>org.apache.kafka</groupId>
         <artifactId>connect-api</artifactId>
-        <version>3.1.0</version> <!-- Match this version with your kafka-clients version -->
+        <version>3.7.0</version> <!-- Match this version with your kafka-clients version -->
     </dependency>
     <dependency>
         <groupId>org.apache.kafka</groupId>
         <artifactId>connect-json</artifactId>
-        <version>3.1.0</version> <!-- Match this version with your kafka-clients version -->
+        <version>3.7.0</version> <!-- Match this version with your kafka-clients version -->
     </dependency>
      <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.32</version> <!-- Use the latest version available -->
+        <version>2.0.13</version> <!-- Use the latest version available -->
     </dependency>
     <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-simple</artifactId>
-        <version>1.7.32</version> <!-- Use the latest version available -->
+        <version>2.0.13</version> <!-- Use the latest version available -->
     </dependency>
     <dependency>
       <groupId>io.nats</groupId>
       <artifactId>jnats</artifactId>
-      <version>2.17.3</version> <!-- Check for the latest version -->
+      <version>2.17.4</version> <!-- Check for the latest version -->
     </dependency>
   </dependencies>
 
@@ -123,7 +123,7 @@
     <plugin>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-jar-plugin</artifactId>
-      <version>3.2.0</version>
+      <version>3.4.0</version>
       <configuration>
         <archive>
           <manifest>
@@ -137,7 +137,7 @@
     <plugin>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-source-plugin</artifactId>
-      <version>3.2.1</version> <!-- Use the latest version available -->
+      <version>3.3.1</version> <!-- Use the latest version available -->
       <executions>
         <execution>
           <id>attach-sources</id>
@@ -152,7 +152,7 @@
     <plugin>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-javadoc-plugin</artifactId>
-      <version>3.3.1</version> <!-- Use the latest version -->
+      <version>3.6.3</version> <!-- Use the latest version -->
       <executions>
         <execution>
           <goals>
@@ -167,31 +167,31 @@
     <!-- maven-clean-plugin -->
     <plugin>
       <artifactId>maven-clean-plugin</artifactId>
-      <version>3.1.0</version>
+      <version>3.3.2</version>
     </plugin>
 
     <!-- maven-resources-plugin -->
     <plugin>
       <artifactId>maven-resources-plugin</artifactId>
-      <version>3.0.2</version>
+      <version>3.3.1</version>
     </plugin>
 
     <!-- maven-compiler-plugin -->
     <plugin>
       <artifactId>maven-compiler-plugin</artifactId>
-      <version>3.8.0</version>
+      <version>3.13.0</version>
     </plugin>
 
     <!-- maven-surefire-plugin -->
     <plugin>
       <artifactId>maven-surefire-plugin</artifactId>
-      <version>2.22.1</version>
+      <version>3.2.5</version>
     </plugin>
 
     <!-- maven-install-plugin -->
     <plugin>
       <artifactId>maven-install-plugin</artifactId>
-      <version>2.5.2</version>
+      <version>3.1.1</version>
     </plugin>
 
     <!-- central-publishing-maven-plugin -->
@@ -251,13 +251,13 @@
     <!-- maven-site-plugin -->
     <plugin>
       <artifactId>maven-site-plugin</artifactId>
-      <version>3.7.1</version>
+      <version>4.0.0-M13</version>
     </plugin>
 
     <!-- maven-project-info-reports-plugin -->
     <plugin>
       <artifactId>maven-project-info-reports-plugin</artifactId>
-      <version>3.0.0</version>
+      <version>3.5.0</version>
     </plugin>
 
     <plugin>
