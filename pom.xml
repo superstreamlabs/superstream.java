@@ -165,6 +165,7 @@
                   <configuration>
                     <publishingServerId>central</publishingServerId>
                     <tokenAuth>true</tokenAuth>
+                    <deploymentName>${project.artifactId}-${project.version}</deploymentName>
                   </configuration>
                 </execution>
               </executions>
