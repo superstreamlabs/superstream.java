@@ -3,7 +3,7 @@ pipeline {
     agent {
         docker {
             label 'memphis-jenkins-big-fleet,'
-            image 'maven:3.8-openjdk-18'
+            image '3.8.5-openjdk-17'
         }
     } 
 
@@ -49,7 +49,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'settings-xml-superstream', variable: 'MAVEN_SETTINGS')]) {
                     sh "mvn -B package --file pom.xml"
                     sh "mvn versions:set -DnewVersion=${env.versionTag}"
-                    sh "mvn -s $MAVEN_SETTINGS deploy -DautoPublish=true"
+                    sh "mvn -s $MAVEN_SETTINGS deploy -DautoPublish=false"
                 }
                 
             }
