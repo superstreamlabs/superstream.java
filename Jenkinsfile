@@ -3,7 +3,7 @@ pipeline {
     agent {
         docker {
             label 'memphis-jenkins-big-fleet,'
-            image '3.8.5-openjdk-17'
+            image 'maven:3.8.5-openjdk-17'
         }
     } 
 
