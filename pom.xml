@@ -8,6 +8,33 @@
     <artifactId>superstream-java</artifactId>
     <version>alpha</version>
 
+    <name>ai.superstream</name>
+    <!-- FIXME change it to the project's website -->
+    <url>http://www.example.com</url>
+    <description>Superstream Java SDK.</description>
+
+    <licenses>
+      <license>
+        <name>The Apache License, Version 2.0</name>
+        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        <distribution>repo</distribution>
+      </license>
+    </licenses>
+
+    <developers>
+      <developer>
+        <id>teammemphis</id>
+        <name>Team Memphis</name>
+        <email>team@memphis.dev</email>
+      </developer>
+    </developers>
+
+    <scm>
+      <connection>scm:git:git://github.com:memphisdev/superstream.java.git</connection>
+      <developerConnection>scm:git:ssh://github.com:memphisdev/superstream.java.git</developerConnection>
+      <url>https://superstream.ai</url>
+    </scm>
+
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -93,6 +120,36 @@
                 <configuration>
                     <release>17</release>
                 </configuration>
+            </plugin>
+
+            <!-- Plugin to bundle project sources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Plugin to generate Javadocs -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
