@@ -21,6 +21,7 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
+            System.out.println("Running Superstream Kafka Consumer");
             String originalDeserializerClassName = configs.get(Consts.originalDeserializer) != null ? (String) configs.get(Consts.originalDeserializer) : null;
             if (originalDeserializerClassName == null) {
                 throw new Exception("original deserializer is required");

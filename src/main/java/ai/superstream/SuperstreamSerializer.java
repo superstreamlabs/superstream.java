@@ -18,6 +18,7 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
+            System.out.println("Running Superstream Kafka Producer");
             String originalSerializerClassName = configs.get(Consts.originalSerializer)!= null ? (String) configs.get(Consts.originalSerializer) : null;
             if (originalSerializerClassName == null) {
                 throw new Exception("original serializer is required");
