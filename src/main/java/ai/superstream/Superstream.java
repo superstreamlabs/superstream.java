@@ -86,15 +86,13 @@ public class Superstream {
             registerClient(configs);
             subscribeToUpdates();
             reportClientsUpdate();
-            switch(type) {
+            switch(this.type) {
                 case "producer":
                     sendClientTypeUpdateReq("producer");
                     break;
                 case "consumer":
                     sendClientTypeUpdateReq("consumer");
                     break;
-                default:
-                    throw new Exception(type + " is not a valid client type");
             } 
         } catch (Exception e) {
             handleError(e.getMessage());
@@ -322,7 +320,7 @@ public class Superstream {
             byte[] payloadBytes = Base64.getDecoder().decode(payloadBytesString);
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = objectMapper.readValue(payloadBytes, Map.class);
-            switch (type) {
+            switch (this.type) {
                 case "LearnedSchema":
                     String descriptorBytesString = (String) payload.get("desc");
                     String masterMsgName = (String) payload.get("master_msg_name");
@@ -522,6 +520,25 @@ public class Superstream {
                 properties.put(Consts.originalSerializer, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
                 properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
             }
+        }
+
+        switch(this.type) {
+            case "producer":
+                String existingInterceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+                if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
+                    existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName();
+                } else {
+                    existingInterceptors = SuperstreamProducerInterceptor.class.getName();
+                }
+                break;
+            case "consumer":
+                String existingConsumerInterceptors = (String) configs.get(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG);
+                if (existingConsumerInterceptors != null && !existingConsumerInterceptors.isEmpty()) {
+                    existingConsumerInterceptors += "," + SuperstreamConsumerInterceptor.class.getName();
+                } else {
+                    existingConsumerInterceptors = SuperstreamConsumerInterceptor.class.getName();
+                }
+                break;
         }
         
         Map<String, String> envVars = System.getenv();
