@@ -463,24 +463,13 @@ public class Superstream {
             }
         }
 
-        switch(this.type) {
-            case "producer":
-                String existingInterceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
-                if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
-                    existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName();
-                } else {
-                    existingInterceptors = SuperstreamProducerInterceptor.class.getName();
-                }
-                break;
-            case "consumer":
-                String existingConsumerInterceptors = (String) configs.get(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG);
-                if (existingConsumerInterceptors != null && !existingConsumerInterceptors.isEmpty()) {
-                    existingConsumerInterceptors += "," + SuperstreamConsumerInterceptor.class.getName();
-                } else {
-                    existingConsumerInterceptors = SuperstreamConsumerInterceptor.class.getName();
-                }
-                break;
+        String existingInterceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
+            existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
+        } else {
+            existingInterceptors = SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
         }
+        configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, existingInterceptors);
         
         Map<String, String> envVars = System.getenv();
         if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
@@ -508,7 +497,7 @@ public class Superstream {
         return configs;
     }
 
-    public Properties initSuperstreamProps(Properties properties) {
+    public static Properties initSuperstreamProps(Properties properties) {
         if (properties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
             if (!properties.containsKey(Consts.originalDeserializer)) {
                 properties.put(Consts.originalDeserializer, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
@@ -522,24 +511,13 @@ public class Superstream {
             }
         }
 
-        switch(this.type) {
-            case "producer":
-                String existingInterceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
-                if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
-                    existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName();
-                } else {
-                    existingInterceptors = SuperstreamProducerInterceptor.class.getName();
-                }
-                break;
-            case "consumer":
-                String existingConsumerInterceptors = (String) configs.get(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG);
-                if (existingConsumerInterceptors != null && !existingConsumerInterceptors.isEmpty()) {
-                    existingConsumerInterceptors += "," + SuperstreamConsumerInterceptor.class.getName();
-                } else {
-                    existingConsumerInterceptors = SuperstreamConsumerInterceptor.class.getName();
-                }
-                break;
+        String existingInterceptors = (String) properties.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
+            existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
+        } else {
+            existingInterceptors = SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
         }
+        properties.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, existingInterceptors);
         
         Map<String, String> envVars = System.getenv();
         if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
