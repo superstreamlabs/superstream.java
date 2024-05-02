@@ -24,7 +24,7 @@ import ai.superstream.Superstream;
 
 public class App
 {
-    public static void main( String[] args ) {
+    public void main( String[] args ) {
         try{
             Properties properties = new Properties();
 
