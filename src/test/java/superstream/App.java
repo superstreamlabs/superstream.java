@@ -24,19 +24,21 @@ import ai.superstream.Superstream;
 
 public class App
 {
-    public void main( String[] args ) {
+    public static void main( String[] args ) {
         try{
             Properties properties = new Properties();
 
             // Producer Configs
             properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+            properties.put("superstream.type", "producer");
 
             // Consumer Configs
             properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
             properties.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group23");
             properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+            properties.put("superstream.type", "consumer");
 
             // Common Configs
             properties.put("security.protocol", "SASL_SSL");
