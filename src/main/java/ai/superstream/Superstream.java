@@ -5,14 +5,25 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerInterceptor;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerInterceptor;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.TopicPartition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
@@ -57,6 +68,8 @@ public class Superstream {
     private String token;
     public String type;
     public Boolean reductionEnabled;
+    public Map<String, Set<Integer>> topicPartitions = new ConcurrentHashMap<>();
+    private ExecutorService executorService = Executors.newCachedThreadPool();
 
     public Superstream(String token, String host, Integer learningFactor, String type, Map<String, ?> configs, Boolean enableReduction) {
         this.learningFactor = learningFactor;
@@ -73,15 +86,13 @@ public class Superstream {
             registerClient(configs);
             subscribeToUpdates();
             reportClientsUpdate();
-            switch(type) {
+            switch(this.type) {
                 case "producer":
                     sendClientTypeUpdateReq("producer");
                     break;
                 case "consumer":
                     sendClientTypeUpdateReq("consumer");
                     break;
-                default:
-                    throw new Exception(type + " is not a valid client type");
             } 
         } catch (Exception e) {
             handleError(e.getMessage());
@@ -93,6 +104,7 @@ public class Superstream {
             if (brokerConnection != null) {
                 brokerConnection.close();
             }
+            executorService.shutdown();
         } catch (Exception e) {}
     }
 
@@ -223,8 +235,21 @@ public class Superstream {
         executorService.scheduleAtFixedRate(() -> {
             try {
                 byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
-
+                Map<String, Object> topicPartitionConfig = new HashMap<>();
+                switch(this.type) {
+                    case "producer":
+                    topicPartitionConfig.put("producer_topics_partitions", topicPartitions);
+                    topicPartitionConfig.put("consumer_group_topics_partitions", new HashMap<>());
+                    break;
+                    case "consumer":
+                    topicPartitionConfig.put("producer_topics_partitions", new HashMap<>());
+                    topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitions);
+                    brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID), new byte[0]);
+                    break;
+                }
+                byte[] byteConfig = objectMapper.writeValueAsBytes(topicPartitionConfig);
                 brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "counters", clientID), byteCounters);
+                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID), byteConfig);
             } catch (Exception e) {
                 handleError("reportClientsUpdate: " + e.getMessage());
             }
@@ -295,7 +320,7 @@ public class Superstream {
             byte[] payloadBytes = Base64.getDecoder().decode(payloadBytesString);
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = objectMapper.readValue(payloadBytes, Map.class);
-            switch (type) {
+            switch (this.type) {
                 case "LearnedSchema":
                     String descriptorBytesString = (String) payload.get("desc");
                     String masterMsgName = (String) payload.get("master_msg_name");
@@ -437,15 +462,23 @@ public class Superstream {
                 configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
             }
         }
+
+        String existingInterceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
+            existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
+        } else {
+            existingInterceptors = SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
+        }
+        configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, existingInterceptors);
         
         Map<String, String> envVars = System.getenv();
         if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
             configs.put(Consts.superstreamTokenKey, envVars.get("SUPERSTREAM_TOKEN"));
+        } else {
+            configs.put(Consts.superstreamTokenKey, Consts.superstreamDefaultToken);
         }
         if (envVars.containsKey("SUPERSTREAM_HOST")) {
             configs.put(Consts.superstreamHostKey, envVars.get("SUPERSTREAM_HOST"));
-        } else {
-            configs.put(Consts.superstreamHostKey, Consts.superstreamDefaultHost);
         }
         if (envVars.containsKey("SUPERSTREAM_LEARNING_FACTOR")) {
             String learningFactorString = envVars.get("SUPERSTREAM_LEARNING_FACTOR");
@@ -477,15 +510,23 @@ public class Superstream {
                 properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
             }
         }
+
+        String existingInterceptors = (String) properties.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
+            existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
+        } else {
+            existingInterceptors = SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
+        }
+        properties.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, existingInterceptors);
         
         Map<String, String> envVars = System.getenv();
         if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
             properties.put(Consts.superstreamTokenKey, envVars.get("SUPERSTREAM_TOKEN"));
+        } else {
+            properties.put(Consts.superstreamTokenKey, Consts.superstreamDefaultToken);
         }
         if (envVars.containsKey("SUPERSTREAM_HOST")) {
             properties.put(Consts.superstreamHostKey, envVars.get("SUPERSTREAM_HOST"));
-        } else {
-            properties.put(Consts.superstreamHostKey, Consts.superstreamDefaultHost);
         }
         if (envVars.containsKey("SUPERSTREAM_LEARNING_FACTOR")) {
             String learningFactorString = envVars.get("SUPERSTREAM_LEARNING_FACTOR");
@@ -495,6 +536,59 @@ public class Superstream {
             properties.put(Consts.superstreamLearningFactorKey, Consts.superstreamDefaultLearningFactor);
         }
         return properties;
+    }
+
+    public class SuperstreamProducerInterceptor<K, V> implements ProducerInterceptor<K, V> {
+        @Override
+        public ProducerRecord<K, V> onSend(ProducerRecord<K, V> record) {
+            executorService.submit(() -> {
+                updateTopicPartitions(record.topic(), record.partition());
+            });
+            return record;
+        }
+
+        @Override
+        public void onAcknowledgement(RecordMetadata metadata, Exception exception) {
+        }
+        
+        @Override
+        public void close() {
+        }
+
+        @Override
+        public void configure(Map<String, ?> configs) {
+        }
+    }
+
+    public class SuperstreamConsumerInterceptor<K, V> implements ConsumerInterceptor<K, V> {
+        @Override
+        public ConsumerRecords<K, V> onConsume(ConsumerRecords<K, V> records) {
+            records.forEach(record -> {
+                executorService.submit(() -> {
+                    updateTopicPartitions(record.topic(), record.partition());
+                });
+            });
+            return records;
+        }
+
+        @Override
+        public void onCommit(Map<TopicPartition, OffsetAndMetadata> offsets) {
+        }
+
+        @Override
+        public void close() {
+        }
+
+        @Override
+        public void configure(Map<String, ?> configs) {
+        }
+    }
+
+    public void updateTopicPartitions(String topic, Integer partition) {
+        Set<Integer> partitions = topicPartitions.computeIfAbsent(topic, k -> new HashSet<>());
+        if (!partitions.contains(partition)) {
+            partitions.add(partition);
+        }
     }
 }
 

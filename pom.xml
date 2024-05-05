@@ -100,14 +100,6 @@
     </dependency>
   </dependencies>
 
-  <!-- <distributionManagement>
-    <repository>
-    <id>superstream</id>
-      <name>Superstream Repository</name>
-      <url>https://github.com/memphisdev/superstream.java</url>
-    </repository>
-  </distributionManagement> -->
-
     <distributionManagement>
     <repository>
     <id>ai.superstream</id>
@@ -208,6 +200,7 @@
           <configuration>
             <publishingServerId>central</publishingServerId>
             <tokenAuth>true</tokenAuth>
+            <deploymentName>${project.artifactId}-${project.version}</deploymentName>
           </configuration>
         </execution>
       </executions>
@@ -241,8 +234,6 @@
                     <gpgArguments>
                         <arg>--batch</arg>
                     </gpgArguments>
-                    <!-- It's better to handle the passphrase outside the pom.xml -->
-                    <!-- You can use environment variables or settings.xml to securely pass the passphrase -->
                 </configuration>
             </execution>
         </executions>
