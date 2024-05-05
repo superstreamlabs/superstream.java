@@ -474,11 +474,11 @@ public class Superstream {
         Map<String, String> envVars = System.getenv();
         if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
             configs.put(Consts.superstreamTokenKey, envVars.get("SUPERSTREAM_TOKEN"));
+        } else {
+            configs.put(Consts.superstreamTokenKey, Consts.superstreamDefaultToken);
         }
         if (envVars.containsKey("SUPERSTREAM_HOST")) {
             configs.put(Consts.superstreamHostKey, envVars.get("SUPERSTREAM_HOST"));
-        } else {
-            configs.put(Consts.superstreamHostKey, Consts.superstreamDefaultHost);
         }
         if (envVars.containsKey("SUPERSTREAM_LEARNING_FACTOR")) {
             String learningFactorString = envVars.get("SUPERSTREAM_LEARNING_FACTOR");
@@ -522,11 +522,11 @@ public class Superstream {
         Map<String, String> envVars = System.getenv();
         if (envVars.containsKey("SUPERSTREAM_TOKEN")) {
             properties.put(Consts.superstreamTokenKey, envVars.get("SUPERSTREAM_TOKEN"));
+        } else {
+            properties.put(Consts.superstreamTokenKey, Consts.superstreamDefaultToken);
         }
         if (envVars.containsKey("SUPERSTREAM_HOST")) {
             properties.put(Consts.superstreamHostKey, envVars.get("SUPERSTREAM_HOST"));
-        } else {
-            properties.put(Consts.superstreamHostKey, Consts.superstreamDefaultHost);
         }
         if (envVars.containsKey("SUPERSTREAM_LEARNING_FACTOR")) {
             String learningFactorString = envVars.get("SUPERSTREAM_LEARNING_FACTOR");
