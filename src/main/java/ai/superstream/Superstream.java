@@ -449,7 +449,7 @@ public class Superstream {
         }
     }
 
-    public Map<String, Object> initSuperstreamConfig(Map<String, Object> configs) {
+    public static Map<String, Object> initSuperstreamConfig(Map<String, Object> configs) {
         if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
             if (!configs.containsKey(Consts.originalDeserializer)) {
                 configs.put(Consts.originalDeserializer, configs.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
