@@ -65,12 +65,13 @@ public class Superstream {
     public Map<String, Set<Integer>> topicPartitions = new ConcurrentHashMap<>();
     public ExecutorService executorService = Executors.newCachedThreadPool();
 
-    public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs, Boolean enableReduction) {
+    public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs, Boolean enableReduction, String type) {
         this.learningFactor = learningFactor;
         this.token = token;
         this.host = host;
         this.configs = configs;
         this.reductionEnabled = enableReduction;
+        this.type = type;
     }
 
     public void init() {
@@ -79,14 +80,10 @@ public class Superstream {
             registerClient(configs);
             subscribeToUpdates();
             reportClientsUpdate();
+            sendClientTypeUpdateReq(type);
         } catch (Exception e) {
             handleError(e.getMessage());
         }
-    }
-
-    public void updateType(String type) {
-        this.type = type;
-        sendClientTypeUpdateReq(type);
     }
 
     public void close() {
@@ -310,7 +307,7 @@ public class Superstream {
             byte[] payloadBytes = Base64.getDecoder().decode(payloadBytesString);
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = objectMapper.readValue(payloadBytes, Map.class);
-            switch (this.type) {
+            switch (type) {
                 case "LearnedSchema":
                     String descriptorBytesString = (String) payload.get("desc");
                     String masterMsgName = (String) payload.get("master_msg_name");
@@ -439,27 +436,37 @@ public class Superstream {
         }
     }
 
-    public static Map<String, Object> initSuperstreamConfig(Map<String, Object> configs) {
-        if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
-            if (!configs.containsKey(Consts.originalDeserializer)) {
-                configs.put(Consts.originalDeserializer, configs.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
-                configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
-            }
+    public static Map<String, Object> initSuperstreamConfig(Map<String, Object> configs, String type) {
+        String interceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        switch (type){ 
+            case "producer":
+                if (interceptors != null && !interceptors.isEmpty()) {
+                    interceptors += "," + SuperstreamProducerInterceptor.class.getName();
+                } else {
+                    interceptors = SuperstreamProducerInterceptor.class.getName();
+                }
+                if (configs.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
+                    if (!configs.containsKey(Consts.originalSerializer)) {
+                        configs.put(Consts.originalSerializer, configs.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                        configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+                    }
+                }
+                break;
+            case "consumer":
+                if (interceptors != null && !interceptors.isEmpty()) {
+                    interceptors += "," + SuperstreamConsumerInterceptor.class.getName();
+                } else {
+                    interceptors = SuperstreamConsumerInterceptor.class.getName();
+                }
+                if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
+                    if (!configs.containsKey(Consts.originalDeserializer)) {
+                        configs.put(Consts.originalDeserializer, configs.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                        configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+                    }
+                }
+                break;
         }
-        if (configs.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
-            if (!configs.containsKey(Consts.originalSerializer)) {
-                configs.put(Consts.originalSerializer, configs.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
-                configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
-            }
-        }
-
-        String existingInterceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
-        if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
-            existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
-        } else {
-            existingInterceptors = SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
-        }
-        configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, existingInterceptors);
+        configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
         
         try {
             Map<String, String> envVars = System.getenv();
@@ -485,7 +492,7 @@ public class Superstream {
                 reductionEnabled = Boolean.parseBoolean(reductionEnabledString);
             }
             configs.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
-            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs, reductionEnabled);
+            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs, reductionEnabled, type);
             superstreamConnection.init();
             configs.put(Consts.superstreamConnectionKey, superstreamConnection);
         } catch (Exception e) {
@@ -495,27 +502,37 @@ public class Superstream {
         return configs;
     }
 
-    public static Properties initSuperstreamProps(Properties properties) {
-        if (properties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
-            if (!properties.containsKey(Consts.originalDeserializer)) {
-                properties.put(Consts.originalDeserializer, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
-                properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+    public static Properties initSuperstreamProps(Properties properties, String type) {
+        String interceptors = (String) properties.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        switch (type){ 
+            case "producer":
+            if (interceptors != null && !interceptors.isEmpty()) {
+                interceptors += "," + SuperstreamProducerInterceptor.class.getName();
+            } else {
+                interceptors = SuperstreamProducerInterceptor.class.getName();
             }
-        }
-        if (properties.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
-            if (!properties.containsKey(Consts.originalSerializer)) {
-                properties.put(Consts.originalSerializer, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
-                properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+            if (properties.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
+                if (!properties.containsKey(Consts.originalSerializer)) {
+                    properties.put(Consts.originalSerializer, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                    properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+                }
             }
+            break;
+            case "consumer":
+            if (interceptors != null && !interceptors.isEmpty()) {
+                interceptors += "," + SuperstreamConsumerInterceptor.class.getName();
+            } else {
+                interceptors = SuperstreamConsumerInterceptor.class.getName();
+            }
+            if (properties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
+                if (!properties.containsKey(Consts.originalDeserializer)) {
+                    properties.put(Consts.originalDeserializer, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                    properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+                }
+            }
+            break;
         }
-
-        String existingInterceptors = (String) properties.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
-        if (existingInterceptors != null && !existingInterceptors.isEmpty()) {
-            existingInterceptors += "," + SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
-        } else {
-            existingInterceptors = SuperstreamProducerInterceptor.class.getName() + "," + SuperstreamConsumerInterceptor.class.getName();
-        }
-        properties.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, existingInterceptors);
+        properties.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
         
         try {
             Map<String, String> envVars = System.getenv();
@@ -542,7 +559,7 @@ public class Superstream {
             }
             properties.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
             Map<String, Object> configs = propertiesToMap(properties);
-            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs, reductionEnabled);
+            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs, reductionEnabled, type);
             superstreamConnection.init();
             properties.put(Consts.superstreamConnectionKey, superstreamConnection);
         } catch (Exception e) {
