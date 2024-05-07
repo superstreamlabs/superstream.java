@@ -469,7 +469,9 @@ public class Superstream {
                 }
                 break;
         }
-        configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+        if (interceptors != null ) {
+            configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+        }
         
         try {
             Map<String, String> envVars = System.getenv();
@@ -509,31 +511,31 @@ public class Superstream {
         String interceptors = (String) properties.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
         switch (type){ 
             case "producer":
-            if (interceptors != null && !interceptors.isEmpty()) {
-                interceptors += "," + SuperstreamProducerInterceptor.class.getName();
-            } else {
-                interceptors = SuperstreamProducerInterceptor.class.getName();
-            }
-            if (properties.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
-                if (!properties.containsKey(Consts.originalSerializer)) {
-                    properties.put(Consts.originalSerializer, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
-                    properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+                if (interceptors != null && !interceptors.isEmpty()) {
+                    interceptors += "," + SuperstreamProducerInterceptor.class.getName();
+                } else {
+                    interceptors = SuperstreamProducerInterceptor.class.getName();
                 }
-            }
-            break;
+                if (properties.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
+                    if (!properties.containsKey(Consts.originalSerializer)) {
+                        properties.put(Consts.originalSerializer, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+                    }
+                }
+                break;
             case "consumer":
-            if (interceptors != null && !interceptors.isEmpty()) {
-                interceptors += "," + SuperstreamConsumerInterceptor.class.getName();
-            } else {
-                interceptors = SuperstreamConsumerInterceptor.class.getName();
-            }
-            if (properties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
-                if (!properties.containsKey(Consts.originalDeserializer)) {
-                    properties.put(Consts.originalDeserializer, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
-                    properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+                if (interceptors != null && !interceptors.isEmpty()) {
+                    interceptors += "," + SuperstreamConsumerInterceptor.class.getName();
+                } else {
+                    interceptors = SuperstreamConsumerInterceptor.class.getName();
                 }
-            }
-            break;
+                if (properties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
+                    if (!properties.containsKey(Consts.originalDeserializer)) {
+                        properties.put(Consts.originalDeserializer, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+                    }
+                }
+                break;
         }
         properties.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
         
