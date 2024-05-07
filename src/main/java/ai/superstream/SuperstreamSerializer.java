@@ -33,7 +33,6 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
                 System.out.println("Failed to connect to Superstream - Running Kafka Producer");
             } else {
                 this.superstreamConnection = superstreamConn;
-                superstreamConn.updateType("producer");
             }
         } catch (Exception e) {
             String errMsg = String.format("superstream: error initializing superstream: %s", e.getMessage());

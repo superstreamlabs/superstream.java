@@ -36,7 +36,6 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
                 System.out.println("Failed to connect to Superstream - Running Kafka Consumer");
             } else {
                 this.superstreamConnection = superstreamConn;
-                superstreamConn.updateType("consumer");
             }
         } catch (Exception e) {
             String errMsg = String.format("superstream: error initializing superstream: %s", e.getMessage());
