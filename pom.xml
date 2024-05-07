@@ -23,15 +23,15 @@
 
   <developers>
     <developer>
-      <id>teammemphis</id>
-      <name>Team Memphis</name>
-      <email>team@memphis.dev</email>
+      <id>superstreamlabs</id>
+      <name>Superstream Labs</name>
+      <email>supper@superstream.ai</email>
     </developer>
   </developers>
 
   <scm>
-    <connection>scm:git:git://github.com:memphisdev/superstream.java.git</connection>
-    <developerConnection>scm:git:ssh://github.com:memphisdev/superstream.java.git</developerConnection>
+    <connection>scm:git:git://github.com:superstreamlabs/superstream.java.git</connection>
+    <developerConnection>scm:git:ssh://github.com:superstreamlabs/superstream.java.git</developerConnection>
     <url>https://superstream.ai</url>
   </scm>
 
