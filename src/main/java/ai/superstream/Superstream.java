@@ -539,6 +539,8 @@ public class Superstream {
     }
 
     public class SuperstreamProducerInterceptor<K, V> implements ProducerInterceptor<K, V> {
+        public SuperstreamProducerInterceptor() {}
+
         @Override
         public ProducerRecord<K, V> onSend(ProducerRecord<K, V> record) {
             executorService.submit(() -> {
@@ -561,6 +563,8 @@ public class Superstream {
     }
 
     public class SuperstreamConsumerInterceptor<K, V> implements ConsumerInterceptor<K, V> {
+        public SuperstreamConsumerInterceptor(){}
+        
         @Override
         public ConsumerRecords<K, V> onConsume(ConsumerRecords<K, V> records) {
             records.forEach(record -> {
