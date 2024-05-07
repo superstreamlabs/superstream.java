@@ -195,6 +195,9 @@ public class Superstream {
     }
 
     public void sendClientTypeUpdateReq(String clientType) {
+        if (type == "" || type == null) {
+            return;
+        }
         try {
             Map<String, Object> reqData = new HashMap<>();
             reqData.put("client_id", clientID);
