@@ -65,12 +65,11 @@ public class Superstream {
     public Map<String, Set<Integer>> topicPartitions = new ConcurrentHashMap<>();
     public ExecutorService executorService = Executors.newCachedThreadPool();
 
-    public Superstream(String token, String host, Integer learningFactor, String type, Map<String, Object> configs, Boolean enableReduction) {
+    public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs, Boolean enableReduction) {
         this.learningFactor = learningFactor;
         this.token = token;
         this.host = host;
         this.configs = configs;
-        this.type = type;
         this.reductionEnabled = enableReduction;
     }
 
@@ -80,17 +79,14 @@ public class Superstream {
             registerClient(configs);
             subscribeToUpdates();
             reportClientsUpdate();
-            switch(this.type) {
-                case "producer":
-                    sendClientTypeUpdateReq("producer");
-                    break;
-                case "consumer":
-                    sendClientTypeUpdateReq("consumer");
-                    break;
-            } 
         } catch (Exception e) {
             handleError(e.getMessage());
         }
+    }
+
+    public void updateType(String type) {
+        this.type = type;
+        sendClientTypeUpdateReq(type);
     }
 
     public void close() {
@@ -489,7 +485,7 @@ public class Superstream {
                 reductionEnabled = Boolean.parseBoolean(reductionEnabledString);
             }
             configs.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
-            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, "producer", configs, reductionEnabled);
+            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs, reductionEnabled);
             superstreamConnection.init();
             configs.put(Consts.superstreamConnectionKey, superstreamConnection);
         } catch (Exception e) {
@@ -546,7 +542,7 @@ public class Superstream {
             }
             properties.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
             Map<String, Object> configs = propertiesToMap(properties);
-            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, "producer", configs, reductionEnabled);
+            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs, reductionEnabled);
             superstreamConnection.init();
             properties.put(Consts.superstreamConnectionKey, superstreamConnection);
         } catch (Exception e) {
