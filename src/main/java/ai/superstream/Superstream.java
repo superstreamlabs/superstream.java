@@ -537,7 +537,9 @@ public class Superstream {
                 }
                 break;
         }
-        properties.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+        if (interceptors != null) {
+            properties.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+        }
         
         try {
             Map<String, String> envVars = System.getenv();
