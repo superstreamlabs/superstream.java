@@ -150,6 +150,7 @@ public class Superstream {
             reqData.put("learning_factor", learningFactor);
             reqData.put("version", Consts.sdkVersion);
             reqData.put("config", normalizeClientConfig(configs));
+            reqData.put("reduction_enabled", reductionEnabled);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(30));
