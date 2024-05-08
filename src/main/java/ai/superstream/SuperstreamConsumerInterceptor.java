@@ -13,11 +13,13 @@ public class SuperstreamConsumerInterceptor<K, V> implements ConsumerInterceptor
     public SuperstreamConsumerInterceptor(){}
     @Override
     public ConsumerRecords<K, V> onConsume(ConsumerRecords<K, V> records) {
-        records.forEach(record -> {
-            this.superstreamConnection.executorService.submit(() -> {
-                this.superstreamConnection.updateTopicPartitions(record.topic(), record.partition());
+        if (this.superstreamConnection != null) {
+            records.forEach(record -> {
+                this.superstreamConnection.executorService.submit(() -> {
+                    this.superstreamConnection.updateTopicPartitions(record.topic(), record.partition());
+                });
             });
-        });
+        };
         return records;
     }
 
@@ -31,5 +33,9 @@ public class SuperstreamConsumerInterceptor<K, V> implements ConsumerInterceptor
 
     @Override
     public void configure(Map<String, ?> configs) {
+        Superstream superstreamConn = (Superstream) configs.get(Consts.superstreamConnectionKey);
+        if (superstreamConn != null) {
+            this.superstreamConnection = superstreamConn;
+        }
     }
 }
