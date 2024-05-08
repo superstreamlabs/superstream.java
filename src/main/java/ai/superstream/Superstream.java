@@ -239,7 +239,6 @@ public class Superstream {
                         case "consumer":
                         topicPartitionConfig.put("producer_topics_partitions", new HashMap<String, Integer[]>());
                         topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
-                        brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID), new byte[0]);
                         break;
                     }
                 }
