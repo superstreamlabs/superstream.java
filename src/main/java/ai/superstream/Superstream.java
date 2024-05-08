@@ -229,14 +229,15 @@ public class Superstream {
             try {
                 byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
                 Map<String, Object> topicPartitionConfig = new HashMap<>();
+                Map<String, Integer[]> topicPartitionsToSend = convertMap(topicPartitions);
                 switch(this.type) {
                     case "producer":
-                    topicPartitionConfig.put("producer_topics_partitions", topicPartitions);
+                    topicPartitionConfig.put("producer_topics_partitions", topicPartitionsToSend);
                     topicPartitionConfig.put("consumer_group_topics_partitions", new HashMap<>());
                     break;
                     case "consumer":
                     topicPartitionConfig.put("producer_topics_partitions", new HashMap<>());
-                    topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitions);
+                    topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
                     brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID), new byte[0]);
                     break;
                 }
@@ -247,6 +248,15 @@ public class Superstream {
                 handleError("reportClientsUpdate: " + e.getMessage());
             }
         }, 0, 30, TimeUnit.SECONDS);
+    }
+
+    public static Map<String, Integer[]> convertMap(Map<String, Set<Integer>> topicPartitions) {
+        Map<String, Integer[]> result = new HashMap<>();
+        for (Map.Entry<String, Set<Integer>> entry : topicPartitions.entrySet()) {
+            Integer[] array = entry.getValue().toArray(new Integer[0]);
+            result.put(entry.getKey(), array);
+        }
+        return result;
     }
 
     public void sendLearningMessage(byte[] msg) {
