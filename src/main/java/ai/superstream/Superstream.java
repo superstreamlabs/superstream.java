@@ -229,17 +229,19 @@ public class Superstream {
             try {
                 byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
                 Map<String, Object> topicPartitionConfig = new HashMap<>();
-                Map<String, Integer[]> topicPartitionsToSend = convertMap(topicPartitions);
-                switch(this.type) {
-                    case "producer":
-                    topicPartitionConfig.put("producer_topics_partitions", topicPartitionsToSend);
-                    topicPartitionConfig.put("consumer_group_topics_partitions", new HashMap<>());
-                    break;
-                    case "consumer":
-                    topicPartitionConfig.put("producer_topics_partitions", new HashMap<>());
-                    topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
-                    brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID), new byte[0]);
-                    break;
+                if (!topicPartitions.isEmpty()) {
+                    Map<String, Integer[]> topicPartitionsToSend = convertMap(topicPartitions);
+                    switch(this.type) {
+                        case "producer":
+                        topicPartitionConfig.put("producer_topics_partitions", topicPartitionsToSend);
+                        topicPartitionConfig.put("consumer_group_topics_partitions", new HashMap<String, Integer[]>());
+                        break;
+                        case "consumer":
+                        topicPartitionConfig.put("producer_topics_partitions", new HashMap<String, Integer[]>());
+                        topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
+                        brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID), new byte[0]);
+                        break;
+                    }
                 }
                 byte[] byteConfig = objectMapper.writeValueAsBytes(topicPartitionConfig);
                 brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "counters", clientID), byteCounters);
