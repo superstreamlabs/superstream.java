@@ -80,7 +80,7 @@ public class Superstream {
             registerClient(configs);
             subscribeToUpdates();
             reportClientsUpdate();
-            sendClientTypeUpdateReq(type);
+            sendClientTypeUpdateReq();
         } catch (Exception e) {
             handleError(e.getMessage());
         }
@@ -194,14 +194,17 @@ public class Superstream {
         }
     }
 
-    public void sendClientTypeUpdateReq(String clientType) {
+    public void sendClientTypeUpdateReq() {
         if (type == "" || type == null) {
+            return;
+        }
+        if (type != "consumer" && type != "producer") {
             return;
         }
         try {
             Map<String, Object> reqData = new HashMap<>();
             reqData.put("client_id", clientID);
-            reqData.put("type", clientType);
+            reqData.put("type", type);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             brokerConnection.request(Consts.clientTypeUpdateSubject, reqBytes, Duration.ofSeconds(30));
