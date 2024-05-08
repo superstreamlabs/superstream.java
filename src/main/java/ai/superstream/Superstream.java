@@ -150,6 +150,7 @@ public class Superstream {
             reqData.put("learning_factor", learningFactor);
             reqData.put("version", Consts.sdkVersion);
             reqData.put("config", normalizeClientConfig(configs));
+            reqData.put("reduction_enabled", reductionEnabled);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(30));
@@ -239,7 +240,6 @@ public class Superstream {
                         case "consumer":
                         topicPartitionConfig.put("producer_topics_partitions", new HashMap<String, Integer[]>());
                         topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
-                        brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID), new byte[0]);
                         break;
                     }
                 }
