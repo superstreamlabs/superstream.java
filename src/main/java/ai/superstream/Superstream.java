@@ -22,6 +22,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -218,19 +219,17 @@ public class Superstream {
     }
 
     private String consumeConnectionID() {
-        Map<String, Object> copiedConfigs = new HashMap<>(this.configs);
-        Properties consumerProps = new Properties();
-        consumerProps.putAll(copiedConfigs);
+        Properties consumerProps = copyAuthConfig();
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
 
-        String topic = "superstream.metadata";
         String connectionId = null;
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps);
         try {
-            consumer.subscribe(Collections.singletonList(topic));
+            TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
+            consumer.assign(Collections.singletonList(topicPartition));
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(10));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
@@ -240,6 +239,38 @@ public class Superstream {
             consumer.close();
         }
         return connectionId;
+    }
+
+    private Properties copyAuthConfig() {
+        String[] relevantKeys = {
+            // Authentication-related keys
+            "security.protocol",
+            "ssl.truststore.location",
+            "ssl.truststore.password",
+            "ssl.keystore.location",
+            "ssl.keystore.password",
+            "ssl.key.password",
+            "ssl.endpoint.identification.algorithm",
+            "sasl.mechanism",
+            "sasl.jaas.config",
+            "sasl.kerberos.service.name",
+            // Networking-related keys
+            "bootstrap.servers",
+            "client.dns.lookup",
+            "connections.max.idle.ms",
+            "request.timeout.ms",
+            "metadata.max.age.ms",
+            "reconnect.backoff.ms",
+            "reconnect.backoff.max.ms"
+        };
+
+        Properties relevantProps = new Properties();
+        for (String key : relevantKeys) {
+            if (configs.containsKey(key)) {
+                relevantProps.put(key, String.valueOf(configs.get(key)));
+            }
+        }
+        return relevantProps;
     }
 
     public void sendClientTypeUpdateReq() {
