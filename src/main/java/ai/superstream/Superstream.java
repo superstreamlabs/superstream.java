@@ -224,6 +224,7 @@ public class Superstream {
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
 
         String topic = "superstream.metadata";
         String connectionId = null;
@@ -504,6 +505,10 @@ public class Superstream {
     }
 
     public static Map<String, Object> initSuperstreamConfig(Map<String, Object> configs, String type) {
+        String isInnerConsumer = (String) configs.get(Consts.superstreamInnerConsumerKey);
+        if (isInnerConsumer != null && isInnerConsumer.equals("true")) {
+            return configs;
+        }
         String interceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
         switch (type) {
             case "producer":
