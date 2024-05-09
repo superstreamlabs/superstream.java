@@ -56,8 +56,8 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
     public T deserialize(String topic, Headers headers, byte[] data) {
         String schemaId = null;
         byte[] dataToDesrialize = data;
-        if (superstreamConnection != null){
-            superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);
+        if (this.superstreamConnection != null){
+            this.superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);
         }
         Header header = headers.lastHeader("superstream_schema");
         if (header != null) {
@@ -84,8 +84,10 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
                 return null;
             }
         } else {
-            superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(data.length);
-            superstreamConnection.clientCounters.incrementTotalMessagesFailedConsume();
+            if (superstreamConnection != null){
+                superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(data.length);
+                superstreamConnection.clientCounters.incrementTotalMessagesFailedConsume();
+            }
         }
         T deserializedData = this.originalDeserializer.deserialize(topic, dataToDesrialize);
         return deserializedData;
@@ -94,6 +96,8 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
     @Override
     public void close() {
         originalDeserializer.close();
-        superstreamConnection.close();
+        if (superstreamConnection != null){
+            superstreamConnection.close();
+        }
     }
 }
