@@ -53,34 +53,40 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
     public byte[] serialize(String topic, Headers headers, T data) {
         byte[] serializedData = this.originalSerializer.serialize(topic, data);
         byte[] serializedResult;
-        if (superstreamConnection != null && superstreamConnection.reductionEnabled == true) {
-            if (superstreamConnection.descriptor != null){
-                try {
-                    Header header = new RecordHeader("superstream_schema",  superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
-                    headers.add(header);
-                    byte[] superstreamSerialized = superstreamConnection.jsonToProto(serializedData);
-                    superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
-                    superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(superstreamSerialized.length);
-                    superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
-                    return superstreamSerialized;
-                } catch (Exception e) {
+        if (superstreamConnection != null)  {
+            if (superstreamConnection.reductionEnabled == true) {
+                if (superstreamConnection.descriptor != null){
+                    try {
+                        Header header = new RecordHeader("superstream_schema",  superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
+                        headers.add(header);
+                        byte[] superstreamSerialized = superstreamConnection.jsonToProto(serializedData);
+                        superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
+                        superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(superstreamSerialized.length);
+                        superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
+                        serializedResult = superstreamSerialized;
+                    } catch (Exception e) {
+                        serializedResult = serializedData;
+                        superstreamConnection.handleError(String.format("error serializing data: ", e.getMessage()));
+                        superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
+                        superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
+                    }
+                } else {
                     serializedResult = serializedData;
-                    superstreamConnection.handleError(String.format("error serializing data: ", e.getMessage()));
                     superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
-                    superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
+                    if (superstreamConnection.learningFactorCounter <= superstreamConnection.learningFactor) {
+                        superstreamConnection.sendLearningMessage(serializedResult);
+                        superstreamConnection.learningFactorCounter++;
+                    } else if (!superstreamConnection.learningRequestSent) {
+                        superstreamConnection.sendRegisterSchemaReq();
+                    }
                 }
             } else {
                 serializedResult = serializedData;
-                superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
-                if (superstreamConnection.learningFactorCounter <= superstreamConnection.learningFactor) {
-                    superstreamConnection.sendLearningMessage(serializedResult);
-                    superstreamConnection.learningFactorCounter++;
-                } else if (!superstreamConnection.learningRequestSent) {
-                    superstreamConnection.sendRegisterSchemaReq();
-                }
+                superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
+                superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
             }
         } else {
-            return serializedData;
+            serializedResult = serializedData;
         }
         return serializedResult;
     }

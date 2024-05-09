@@ -21,4 +21,6 @@ public class Consts {
     public static final String superstreamTokenKey = "superstream.token";
     public static final String superstreamReductionEnabledKey = "superstream.reduction.enabled";
     public static final String superstreamConnectionKey = "superstream.connection";
+    public static final String superstreamInnerConsumerKey = "superstream.inner.consumer";
+    public static final String superstreamMetadataTopic = "superstream.metadata";
 }
