@@ -77,10 +77,12 @@ public class Superstream {
     public void init() {
         try {
             initializeNatsConnection(token, host);
-            registerClient(configs);
-            subscribeToUpdates();
-            reportClientsUpdate();
-            sendClientTypeUpdateReq();
+            if (this.brokerConnection != null) {
+                registerClient(configs);
+                subscribeToUpdates();
+                reportClientsUpdate();
+                sendClientTypeUpdateReq();
+            }
         } catch (Exception e) {
             handleError(e.getMessage());
         }
@@ -109,13 +111,15 @@ public class Superstream {
                                 System.out.println("superstream: Disconnected");
                             } else if (type == Events.RECONNECTED) {
                                 try {
-                                    natsConnectionID = generateNatsConnectionID();
-                                    Map<String, Object> reqData = new HashMap<>();
-                                    reqData.put("new_nats_connection_id", natsConnectionID);
-                                    reqData.put("client_id", clientID);
-                                    ObjectMapper mapper = new ObjectMapper();
-                                    byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-                                    brokerConnection.request(Consts.clientReconnectionUpdateSubject, reqBytes, Duration.ofSeconds(30));
+                                    if (brokerConnection != null) {
+                                        natsConnectionID = generateNatsConnectionID();
+                                        Map<String, Object> reqData = new HashMap<>();
+                                        reqData.put("new_nats_connection_id", natsConnectionID);
+                                        reqData.put("client_id", clientID);
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        byte[] reqBytes = mapper.writeValueAsBytes(reqData);
+                                        brokerConnection.request(Consts.clientReconnectionUpdateSubject, reqBytes, Duration.ofSeconds(30));
+                                    }
                                 } catch (Exception e) {
                                     System.out.println("superstream: Failed to send reconnection update: " + e.getMessage());
                                 }
@@ -126,7 +130,13 @@ public class Superstream {
                     .build();
 
             Connection nc = Nats.connect(options);
+            if (nc == null) {
+                throw new Exception(String.format("Failed to connect to host: %s", host));
+            }
             JetStream js = nc.jetStream();
+            if (js == null) {
+                throw new Exception(String.format("Failed to connect to host: %s", host));
+            }
             brokerConnection = nc;
             jetstream = js;
             natsConnectionID = generateNatsConnectionID();
