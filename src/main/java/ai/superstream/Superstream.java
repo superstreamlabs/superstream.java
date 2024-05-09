@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -17,7 +18,11 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
@@ -39,7 +44,7 @@ import io.nats.client.Message;
 import io.nats.client.MessageHandler;
 
 public class Superstream {
-    public  Connection brokerConnection;
+    public Connection brokerConnection;
     public JetStream jetstream;
     public String superstreamJwt;
     public String superstreamNkey;
@@ -64,8 +69,10 @@ public class Superstream {
     public Boolean reductionEnabled;
     public Map<String, Set<Integer>> topicPartitions = new ConcurrentHashMap<>();
     public ExecutorService executorService = Executors.newCachedThreadPool();
+    private Integer kafkaConnectionID = 0;
 
-    public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs, Boolean enableReduction, String type) {
+    public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
+            Boolean enableReduction, String type) {
         this.learningFactor = learningFactor;
         this.token = token;
         this.host = host;
@@ -154,6 +161,10 @@ public class Superstream {
 
     public void registerClient(Map<String, ?> configs) {
         try {
+            String kafkaConnID = consumeConnectionID();
+            if (kafkaConnID != null) {
+                kafkaConnectionID = Integer.parseInt(kafkaConnID);
+            }
             Map<String, Object> reqData = new HashMap<>();
             reqData.put("nats_connection_id", natsConnectionID);
             reqData.put("language", "java");
@@ -161,6 +172,7 @@ public class Superstream {
             reqData.put("version", Consts.sdkVersion);
             reqData.put("config", normalizeClientConfig(configs));
             reqData.put("reduction_enabled", reductionEnabled);
+            reqData.put("connection_id", kafkaConnectionID);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(30));
@@ -203,6 +215,30 @@ public class Superstream {
         } catch (Exception e) {
             System.out.println(String.format("superstream: %s", e.getMessage()));
         }
+    }
+
+    private String consumeConnectionID() {
+        Map<String, Object> copiedConfigs = new HashMap<>(this.configs);
+        Properties consumerProps = new Properties();
+        consumerProps.putAll(copiedConfigs);
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        String topic = "superstream.metadata";
+        String connectionId = null;
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps);
+        try {
+            consumer.subscribe(Collections.singletonList(topic));
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(10));
+            for (ConsumerRecord<String, String> record : records) {
+                connectionId = record.value();
+                break;
+            }
+        } finally {
+            consumer.close();
+        }
+        return connectionId;
     }
 
     public void sendClientTypeUpdateReq() {
@@ -397,7 +433,6 @@ public class Superstream {
                 }
                 FileDescriptorSet descriptorSet = FileDescriptorSet.parseFrom(descriptorAsBytes);
                 FileDescriptor fileDescriptor = null;
-            
                 for (DescriptorProtos.FileDescriptorProto fdp : descriptorSet.getFileList()) {
                     if (fdp.getName().equals(fileName)) {
                         fileDescriptor = FileDescriptor.buildFrom(fdp, new FileDescriptor[]{});
@@ -421,7 +456,7 @@ public class Superstream {
     }
 
     public void handleError(String msg) {
-        if (brokerConnection != null ) {
+        if (brokerConnection != null) {
             String message = String.format("[account name: %s][clientID: %d][sdk: java][version: %s] %s", accountName, clientID, Consts.sdkVersion, msg);
             brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
         }
@@ -432,33 +467,37 @@ public class Superstream {
 
         // Producer configurations
         // Note: Handling of `producer_return_errors` and `producer_return_successes` is typically done programmatically in the Java client, `producer_flush_max_messages` does not exist in java
-        mapIfPresent(javaConfig, ProducerConfig.MAX_REQUEST_SIZE_CONFIG, superstreamConfig, "producer_max_messages_bytes"); 
-        mapIfPresent(javaConfig, ProducerConfig.ACKS_CONFIG, superstreamConfig, "producer_required_acks"); 
-        mapIfPresent(javaConfig, ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, superstreamConfig, "producer_timeout"); 
-        mapIfPresent(javaConfig, ProducerConfig.RETRIES_CONFIG, superstreamConfig, "producer_retry_max"); 
-        mapIfPresent(javaConfig, ProducerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "producer_retry_backoff"); 
+        mapIfPresent(javaConfig, ProducerConfig.MAX_REQUEST_SIZE_CONFIG, superstreamConfig, "producer_max_messages_bytes");
+        mapIfPresent(javaConfig, ProducerConfig.ACKS_CONFIG, superstreamConfig, "producer_required_acks");
+        mapIfPresent(javaConfig, ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, superstreamConfig, "producer_timeout");
+        mapIfPresent(javaConfig, ProducerConfig.RETRIES_CONFIG, superstreamConfig, "producer_retry_max");
+        mapIfPresent(javaConfig, ProducerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "producer_retry_backoff");
         mapIfPresent(javaConfig, ProducerConfig.COMPRESSION_TYPE_CONFIG, superstreamConfig, "producer_compression_level");
         // Consumer configurations
         // Note: `consumer_return_errors`, `consumer_offsets_initial`, `consumer_offsets_retry_max`, `consumer_group_rebalance_timeout`, `consumer_group_rebalance_retry_max` does not exist in java
-        mapIfPresent(javaConfig, ConsumerConfig.FETCH_MIN_BYTES_CONFIG, superstreamConfig, "consumer_fetch_min"); 
-        mapIfPresent(javaConfig, ConsumerConfig.FETCH_MAX_BYTES_CONFIG, superstreamConfig, "consumer_fetch_default"); 
-        mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "consumer_retry_backoff"); 
-        mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_max_wait_time"); 
-        mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_RECORDS_CONFIG, superstreamConfig, "consumer_max_processing_time"); 
-        // mapIfPresent(javaConfig, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, superstreamConfig, "consumer_offset_auto_commit_enable"); // TODO: handle boolean vars
+        mapIfPresent(javaConfig, ConsumerConfig.FETCH_MIN_BYTES_CONFIG, superstreamConfig, "consumer_fetch_min");
+        mapIfPresent(javaConfig, ConsumerConfig.FETCH_MAX_BYTES_CONFIG, superstreamConfig, "consumer_fetch_default");
+        mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "consumer_retry_backoff");
+        mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_max_wait_time");
+        mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_RECORDS_CONFIG, superstreamConfig,
+                "consumer_max_processing_time");
+        // mapIfPresent(javaConfig, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, superstreamConfig, "consumer_offset_auto_commit_enable"); 
+        // TODO: handle boolean vars
         mapIfPresent(javaConfig, ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_offset_auto_commit_interval");
-        mapIfPresent(javaConfig, ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG , superstreamConfig, "consumer_group_session_timeout");
-        mapIfPresent(javaConfig, ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG , superstreamConfig, "consumer_group_heart_beat_interval");
-        mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG , superstreamConfig, "consumer_group_rebalance_retry_back_off");
+        mapIfPresent(javaConfig, ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, superstreamConfig, "consumer_group_session_timeout");
+        mapIfPresent(javaConfig, ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_group_heart_beat_interval");
+        mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "consumer_group_rebalance_retry_back_off");
         // mapIfPresent(javaConfig, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , superstreamConfig, "consumer_group_rebalance_reset_invalid_offsets"); // TODO: handle boolean vars
-        mapIfPresent(javaConfig, ConsumerConfig.GROUP_ID_CONFIG , superstreamConfig, "consumer_group_id");
+        mapIfPresent(javaConfig, ConsumerConfig.GROUP_ID_CONFIG, superstreamConfig, "consumer_group_id");
         // Common configurations
-        mapIfPresent(javaConfig, ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, superstreamConfig, "servers"); 
-        // Note: No access to `producer_topics_partitions` and `consumer_group_topics_partitions`
+        mapIfPresent(javaConfig, ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, superstreamConfig, "servers");
+        // Note: No access to `producer_topics_partitions` and
+        // `consumer_group_topics_partitions`
         return superstreamConfig;
     }
 
-    private static void mapIfPresent(Map<String, ?> javaConfig, String javaKey, Map<String, Object> superstreamConfig, String superstreamKey) {
+    private static void mapIfPresent(Map<String, ?> javaConfig, String javaKey, Map<String, Object> superstreamConfig,
+            String superstreamKey) {
         if (javaConfig.containsKey(javaKey)) {
             superstreamConfig.put(superstreamKey, javaConfig.get(javaKey));
         }
@@ -466,7 +505,7 @@ public class Superstream {
 
     public static Map<String, Object> initSuperstreamConfig(Map<String, Object> configs, String type) {
         String interceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
-        switch (type){ 
+        switch (type) {
             case "producer":
                 if (interceptors != null && !interceptors.isEmpty()) {
                     interceptors += "," + SuperstreamProducerInterceptor.class.getName();
@@ -475,8 +514,10 @@ public class Superstream {
                 }
                 if (configs.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
                     if (!configs.containsKey(Consts.originalSerializer)) {
-                        configs.put(Consts.originalSerializer, configs.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
-                        configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+                        configs.put(Consts.originalSerializer,
+                                configs.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                        configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                                SuperstreamSerializer.class.getName());
                     }
                 }
                 break;
@@ -488,16 +529,18 @@ public class Superstream {
                 }
                 if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
                     if (!configs.containsKey(Consts.originalDeserializer)) {
-                        configs.put(Consts.originalDeserializer, configs.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
-                        configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+                        configs.put(Consts.originalDeserializer,
+                                configs.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                        configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                                SuperstreamDeserializer.class.getName());
                     }
                 }
                 break;
         }
-        if (interceptors != null ) {
+        if (interceptors != null) {
             configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
         }
-        
+
         try {
             Map<String, String> envVars = System.getenv();
             String superstreamHost = envVars.get("SUPERSTREAM_HOST");
@@ -505,7 +548,7 @@ public class Superstream {
                 throw new Exception("host is required");
             }
             configs.put(Consts.superstreamHostKey, superstreamHost);
-            String token  = envVars.get("SUPERSTREAM_TOKEN");
+            String token = envVars.get("SUPERSTREAM_TOKEN");
             if (token == null) {
                 token = Consts.superstreamDefaultToken;
             }
@@ -522,7 +565,8 @@ public class Superstream {
                 reductionEnabled = Boolean.parseBoolean(reductionEnabledString);
             }
             configs.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
-            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs, reductionEnabled, type);
+            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs,
+                    reductionEnabled, type);
             superstreamConnection.init();
             configs.put(Consts.superstreamConnectionKey, superstreamConnection);
         } catch (Exception e) {
@@ -534,7 +578,7 @@ public class Superstream {
 
     public static Properties initSuperstreamProps(Properties properties, String type) {
         String interceptors = (String) properties.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
-        switch (type){ 
+        switch (type) {
             case "producer":
                 if (interceptors != null && !interceptors.isEmpty()) {
                     interceptors += "," + SuperstreamProducerInterceptor.class.getName();
@@ -543,8 +587,10 @@ public class Superstream {
                 }
                 if (properties.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
                     if (!properties.containsKey(Consts.originalSerializer)) {
-                        properties.put(Consts.originalSerializer, properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
-                        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, SuperstreamSerializer.class.getName());
+                        properties.put(Consts.originalSerializer,
+                                properties.get(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG));
+                        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                                SuperstreamSerializer.class.getName());
                     }
                 }
                 break;
@@ -556,8 +602,10 @@ public class Superstream {
                 }
                 if (properties.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
                     if (!properties.containsKey(Consts.originalDeserializer)) {
-                        properties.put(Consts.originalDeserializer, properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
-                        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, SuperstreamDeserializer.class.getName());
+                        properties.put(Consts.originalDeserializer,
+                                properties.get(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG));
+                        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                                SuperstreamDeserializer.class.getName());
                     }
                 }
                 break;
@@ -565,7 +613,7 @@ public class Superstream {
         if (interceptors != null) {
             properties.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
         }
-        
+
         try {
             Map<String, String> envVars = System.getenv();
             String superstreamHost = envVars.get("SUPERSTREAM_HOST");
@@ -573,7 +621,7 @@ public class Superstream {
                 throw new Exception("host is required");
             }
             properties.put(Consts.superstreamHostKey, superstreamHost);
-            String token  = envVars.get("SUPERSTREAM_TOKEN");
+            String token = envVars.get("SUPERSTREAM_TOKEN");
             if (token == null) {
                 token = Consts.superstreamDefaultToken;
             }
@@ -591,7 +639,8 @@ public class Superstream {
             }
             properties.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
             Map<String, Object> configs = propertiesToMap(properties);
-            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs, reductionEnabled, type);
+            Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs,
+                    reductionEnabled, type);
             superstreamConnection.init();
             properties.put(Consts.superstreamConnectionKey, superstreamConnection);
         } catch (Exception e) {
@@ -603,10 +652,9 @@ public class Superstream {
 
     public static Map<String, Object> propertiesToMap(Properties properties) {
         return properties.entrySet().stream()
-            .collect(Collectors.toMap(
-                e -> String.valueOf(e.getKey()),
-                e -> e.getValue()
-            ));
+                .collect(Collectors.toMap(
+                        e -> String.valueOf(e.getKey()),
+                        e -> e.getValue()));
     }
 
     public void updateTopicPartitions(String topic, Integer partition) {
