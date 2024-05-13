@@ -3,6 +3,7 @@ package ai.superstream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
@@ -537,7 +538,11 @@ public class Superstream {
     private static void mapIfPresent(Map<String, ?> javaConfig, String javaKey, Map<String, Object> superstreamConfig,
             String superstreamKey) {
         if (javaConfig.containsKey(javaKey)) {
-            superstreamConfig.put(superstreamKey, javaConfig.get(javaKey));
+            if (javaKey == ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) {
+                superstreamConfig.put(superstreamKey, Arrays.toString((String[]) javaConfig.get(javaKey)));
+            } else {
+                superstreamConfig.put(superstreamKey, javaConfig.get(javaKey));
+            }
         }
     }
 
