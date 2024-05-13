@@ -95,7 +95,9 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
 
     @Override
     public void close() {
-        originalDeserializer.close();
+        if (originalDeserializer != null) {
+            originalDeserializer.close();
+        }
         if (superstreamConnection != null){
             superstreamConnection.close();
         }
