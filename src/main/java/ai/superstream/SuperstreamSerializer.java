@@ -93,7 +93,9 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
 
     @Override
     public void close() {
-        originalSerializer.close();
+        if (this.originalSerializer != null){
+            originalSerializer.close();
+        }
         if (superstreamConnection != null){
             superstreamConnection.close();
         }
