@@ -628,6 +628,22 @@ public class Superstream {
         } catch (Exception e) {
             String errMsg = String.format("superstream: error initializing superstream: %s", e.getMessage());
             System.out.println(errMsg);
+            switch (type) {
+                case "producer":
+                    if (configs.containsKey(Consts.originalSerializer)) {
+                        configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                                configs.get(Consts.originalSerializer));
+                        configs.remove(Consts.originalSerializer);
+                    }
+                    break;
+                case "consumer":
+                    if (configs.containsKey(Consts.originalDeserializer)) {
+                        configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                                configs.get(Consts.originalDeserializer));
+                        configs.remove(Consts.originalDeserializer);
+                    }
+                    break;
+            }
         }
         return configs;
     }
