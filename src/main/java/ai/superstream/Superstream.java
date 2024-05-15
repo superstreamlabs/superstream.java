@@ -544,8 +544,9 @@ public class Superstream {
                 if (value instanceof String[]){
                     superstreamConfig.put(superstreamKey, Arrays.toString((String[]) value));
                 } else if (value instanceof ArrayList) {
-                    ArrayList<?> arrayList = (ArrayList<?>) value;
-                    superstreamConfig.put(superstreamKey, arrayList.toString());
+                    @SuppressWarnings("unchecked")
+                    ArrayList<String> arrayList = (ArrayList<String>) value;
+                    superstreamConfig.put(superstreamKey, String.join(", ", arrayList));
                 } else {
                     superstreamConfig.put(superstreamKey, value);
                 }
