@@ -3,6 +3,7 @@ package ai.superstream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -542,6 +543,9 @@ public class Superstream {
                 Object value = javaConfig.get(javaKey);
                 if (value instanceof String[]){
                     superstreamConfig.put(superstreamKey, Arrays.toString((String[]) value));
+                } else if (value instanceof ArrayList) {
+                    ArrayList<?> arrayList = (ArrayList<?>) value;
+                    superstreamConfig.put(superstreamKey, arrayList.toString());
                 } else {
                     superstreamConfig.put(superstreamKey, value);
                 }
