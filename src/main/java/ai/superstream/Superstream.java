@@ -3,6 +3,7 @@ package ai.superstream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -539,7 +540,15 @@ public class Superstream {
             String superstreamKey) {
         if (javaConfig.containsKey(javaKey)) {
             if (javaKey == ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) {
-                superstreamConfig.put(superstreamKey, Arrays.toString((String[]) javaConfig.get(javaKey)));
+                Object value = javaConfig.get(javaKey);
+                if (value instanceof String[]){
+                    superstreamConfig.put(superstreamKey, Arrays.toString((String[]) value));
+                } else if (value instanceof ArrayList) {
+                    ArrayList<?> arrayList = (ArrayList<?>) value;
+                    superstreamConfig.put(superstreamKey, arrayList.toString());
+                } else {
+                    superstreamConfig.put(superstreamKey, value);
+                }
             } else {
                 superstreamConfig.put(superstreamKey, javaConfig.get(javaKey));
             }
@@ -619,6 +628,22 @@ public class Superstream {
         } catch (Exception e) {
             String errMsg = String.format("superstream: error initializing superstream: %s", e.getMessage());
             System.out.println(errMsg);
+            switch (type) {
+                case "producer":
+                    if (configs.containsKey(Consts.originalSerializer)) {
+                        configs.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                                configs.get(Consts.originalSerializer));
+                        configs.remove(Consts.originalSerializer);
+                    }
+                    break;
+                case "consumer":
+                    if (configs.containsKey(Consts.originalDeserializer)) {
+                        configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                                configs.get(Consts.originalDeserializer));
+                        configs.remove(Consts.originalDeserializer);
+                    }
+                    break;
+            }
         }
         return configs;
     }
