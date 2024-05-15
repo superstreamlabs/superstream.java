@@ -48,12 +48,18 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
 
     @Override
     public T deserialize(String topic, byte[] data) {
+        if (originalDeserializer == null) {
+            return null;
+        }
         T deserializedData = originalDeserializer.deserialize(topic, data);
         return deserializedData;
     }
 
     @Override
     public T deserialize(String topic, Headers headers, byte[] data) {
+        if (originalDeserializer == null) {
+            return null;
+        }
         String schemaId = null;
         byte[] dataToDesrialize = data;
         if (this.superstreamConnection != null){

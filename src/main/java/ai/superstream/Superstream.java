@@ -539,7 +539,12 @@ public class Superstream {
             String superstreamKey) {
         if (javaConfig.containsKey(javaKey)) {
             if (javaKey == ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) {
-                superstreamConfig.put(superstreamKey, Arrays.toString((String[]) javaConfig.get(javaKey)));
+                Object value = javaConfig.get(javaKey);
+                if (value instanceof String[]){
+                    superstreamConfig.put(superstreamKey, Arrays.toString((String[]) value));
+                } else {
+                    superstreamConfig.put(superstreamKey, value);
+                }
             } else {
                 superstreamConfig.put(superstreamKey, javaConfig.get(javaKey));
             }

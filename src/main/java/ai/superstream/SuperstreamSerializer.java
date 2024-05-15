@@ -45,12 +45,18 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
 
     @Override
     public byte[] serialize(String topic, T data) {
+        if (originalSerializer == null) {
+            return null;
+        }
         byte[] serializedData = originalSerializer.serialize(topic, data);
         return serializedData;
     }
 
     @Override
     public byte[] serialize(String topic, Headers headers, T data) {
+        if (originalSerializer == null) {
+            return null;
+        }
         byte[] serializedData = this.originalSerializer.serialize(topic, data);
         byte[] serializedResult;
         if (superstreamConnection != null)  {
