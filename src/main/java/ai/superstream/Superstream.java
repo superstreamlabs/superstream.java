@@ -167,14 +167,15 @@ public class Superstream {
 
     public void registerClient(Map<String, ?> configs) {
         try {
-            String kafkaConnID = consumeConnectionID();
-            if (kafkaConnID != null) {
-                try {
-                    kafkaConnectionID = Integer.parseInt(kafkaConnID);
-                } catch (Exception e) {
-                    kafkaConnectionID = 0;
-                }
-            }
+            // TODOD: remove comments if works
+            // String kafkaConnID = consumeConnectionID();
+            // if (kafkaConnID != null) {
+            // try {
+            // kafkaConnectionID = Integer.parseInt(kafkaConnID);
+            // } catch (Exception e) {
+            // kafkaConnectionID = 0;
+            // }
+            // }
             kafkaConnectionID = 0;
             Map<String, Object> reqData = new HashMap<>();
             reqData.put("nats_connection_id", natsConnectionID);
@@ -513,7 +514,8 @@ public class Superstream {
     public void handleError(String msg) {
         if (brokerConnection != null) {
             if (clientID == 0) {
-                String message = String.format("[sdk: java][version: %s][connectionID: %s] %s", Consts.sdkVersion, msg);
+                String message = String.format("[sdk: java][version: %s][connectionID: %s] %s", Consts.sdkVersion,
+                        this.natsConnectionID, msg);
                 brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
             } else {
                 String message = String.format("[account name: %s][clientID: %d][sdk: java][version: %s] %s",
