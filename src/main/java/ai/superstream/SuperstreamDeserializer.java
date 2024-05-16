@@ -70,6 +70,9 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
         }
         String schemaId = null;
         byte[] dataToDesrialize = data;
+        if (dataToDesrialize == null) {
+            this.originalDeserializer.deserialize(topic, dataToDesrialize);
+        }
         if (this.superstreamConnection != null) {
             this.superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);
         }

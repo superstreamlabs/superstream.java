@@ -256,6 +256,10 @@ public class Superstream {
                 consumer.close();
             }
         }
+        if (connectionId == null) {
+            handleError(
+                    String.format("consumeConnectionID: Unable to consume connection ID, reached 10 second timeout"));
+        }
         return connectionId;
     }
 
