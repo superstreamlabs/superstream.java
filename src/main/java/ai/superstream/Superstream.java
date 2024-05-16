@@ -167,16 +167,14 @@ public class Superstream {
 
     public void registerClient(Map<String, ?> configs) {
         try {
-            // TODOD: remove comments if works
-            // String kafkaConnID = consumeConnectionID();
-            // if (kafkaConnID != null) {
-            // try {
-            // kafkaConnectionID = Integer.parseInt(kafkaConnID);
-            // } catch (Exception e) {
-            // kafkaConnectionID = 0;
-            // }
-            // }
-            kafkaConnectionID = 0;
+            String kafkaConnID = consumeConnectionID();
+            if (kafkaConnID != null) {
+                try {
+                    kafkaConnectionID = Integer.parseInt(kafkaConnID);
+                } catch (Exception e) {
+                    kafkaConnectionID = 0;
+                }
+            }
             Map<String, Object> reqData = new HashMap<>();
             reqData.put("nats_connection_id", natsConnectionID);
             reqData.put("language", "java");
