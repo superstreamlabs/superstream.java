@@ -238,8 +238,9 @@ public class Superstream {
         consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
 
         String connectionId = null;
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps);
+        KafkaConsumer<String, String> consumer = null;
         try {
+            consumer = new KafkaConsumer<>(consumerProps);
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
             consumer.assign(Collections.singletonList(topicPartition));
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(10));
@@ -251,7 +252,9 @@ public class Superstream {
             handleError(String.format("consumeConnectionID: %s", e.getMessage()));
             return "0";
         } finally {
-            consumer.close();
+            if (consumer != null) {
+                consumer.close();
+            }
         }
         return connectionId;
     }
@@ -282,7 +285,20 @@ public class Superstream {
         Properties relevantProps = new Properties();
         for (String key : relevantKeys) {
             if (configs.containsKey(key)) {
-                relevantProps.put(key, String.valueOf(configs.get(key)));
+                if (key == ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) {
+                    Object value = configs.get(key);
+                    if (value instanceof String[]) {
+                        relevantProps.put(key, Arrays.toString((String[]) value));
+                    } else if (value instanceof ArrayList) {
+                        @SuppressWarnings("unchecked")
+                        ArrayList<String> arrayList = (ArrayList<String>) value;
+                        relevantProps.put(key, String.join(", ", arrayList));
+                    } else {
+                        relevantProps.put(key, value);
+                    }
+                } else {
+                    relevantProps.put(key, String.valueOf(configs.get(key)));
+                }
             }
         }
         return relevantProps;
