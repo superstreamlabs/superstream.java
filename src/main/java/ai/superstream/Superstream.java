@@ -104,7 +104,8 @@ public class Superstream {
                 brokerConnection.close();
             }
             executorService.shutdown();
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
     }
 
     private void initializeNatsConnection(String token, String host) {
@@ -128,10 +129,12 @@ public class Superstream {
                                         reqData.put("client_id", clientID);
                                         ObjectMapper mapper = new ObjectMapper();
                                         byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-                                        brokerConnection.request(Consts.clientReconnectionUpdateSubject, reqBytes, Duration.ofSeconds(30));
+                                        brokerConnection.request(Consts.clientReconnectionUpdateSubject, reqBytes,
+                                                Duration.ofSeconds(30));
                                     }
                                 } catch (Exception e) {
-                                    System.out.println("superstream: Failed to send reconnection update: " + e.getMessage());
+                                    System.out.println(
+                                            "superstream: Failed to send reconnection update: " + e.getMessage());
                                 }
                                 System.out.println("superstream: Reconnected to superstream");
                             }
@@ -158,21 +161,20 @@ public class Superstream {
     private String generateNatsConnectionID() {
         ServerInfo serverInfo = brokerConnection.getServerInfo();
         String connectedServerName = serverInfo.getServerName();
-        clientID = serverInfo.getClientId();
-        return connectedServerName + ":" + clientID;
+        int serverClientID = serverInfo.getClientId();
+        return connectedServerName + ":" + serverClientID;
     }
 
     public void registerClient(Map<String, ?> configs) {
         try {
-            // TODO: remove if passes tests
-            // String kafkaConnID = consumeConnectionID();
-            // if (kafkaConnID != null) {
-            //     try {
-            //         kafkaConnectionID = Integer.parseInt(kafkaConnID);
-            //     } catch (Exception e) {
-            //         kafkaConnectionID = 0;
-            //     }
-            // }
+            String kafkaConnID = consumeConnectionID();
+            if (kafkaConnID != null) {
+                try {
+                    kafkaConnectionID = Integer.parseInt(kafkaConnID);
+                } catch (Exception e) {
+                    kafkaConnectionID = 0;
+                }
+            }
             kafkaConnectionID = 0;
             Map<String, Object> reqData = new HashMap<>();
             reqData.put("nats_connection_id", natsConnectionID);
@@ -213,13 +215,16 @@ public class Superstream {
                     try {
                         learningFactor = Integer.parseInt((String) learningFactorObject);
                     } catch (NumberFormatException e) {
-                        System.err.println("superstream: learning_factor is not a valid integer: " + learningFactorObject);
+                        System.err.println(
+                                "superstream: learning_factor is not a valid integer: " + learningFactorObject);
                     }
                 } else {
                     System.err.println("superstream: learning_factor is not a valid integer: " + learningFactorObject);
                 }
             } else {
-                System.out.println("superstream: registering client: No reply received within the timeout period.");
+                String errMsg = "superstream: registering client: No reply received within the timeout period.";
+                System.out.println(errMsg);
+                handleError(errMsg);
             }
         } catch (Exception e) {
             System.out.println(String.format("superstream: %s", e.getMessage()));
@@ -243,6 +248,9 @@ public class Superstream {
                 connectionId = record.value();
                 break;
             }
+        } catch (Exception e) {
+            handleError(String.format("consumeConnectionID: %s", e.getMessage()));
+            return "0";
         } finally {
             consumer.close();
         }
@@ -251,25 +259,25 @@ public class Superstream {
 
     private Properties copyAuthConfig() {
         String[] relevantKeys = {
-            // Authentication-related keys
-            "security.protocol",
-            "ssl.truststore.location",
-            "ssl.truststore.password",
-            "ssl.keystore.location",
-            "ssl.keystore.password",
-            "ssl.key.password",
-            "ssl.endpoint.identification.algorithm",
-            "sasl.mechanism",
-            "sasl.jaas.config",
-            "sasl.kerberos.service.name",
-            // Networking-related keys
-            "bootstrap.servers",
-            "client.dns.lookup",
-            "connections.max.idle.ms",
-            "request.timeout.ms",
-            "metadata.max.age.ms",
-            "reconnect.backoff.ms",
-            "reconnect.backoff.max.ms"
+                // Authentication-related keys
+                "security.protocol",
+                "ssl.truststore.location",
+                "ssl.truststore.password",
+                "ssl.keystore.location",
+                "ssl.keystore.password",
+                "ssl.key.password",
+                "ssl.endpoint.identification.algorithm",
+                "sasl.mechanism",
+                "sasl.jaas.config",
+                "sasl.kerberos.service.name",
+                // Networking-related keys
+                "bootstrap.servers",
+                "client.dns.lookup",
+                "connections.max.idle.ms",
+                "request.timeout.ms",
+                "metadata.max.age.ms",
+                "reconnect.backoff.ms",
+                "reconnect.backoff.max.ms"
         };
 
         Properties relevantProps = new Properties();
@@ -296,7 +304,7 @@ public class Superstream {
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             brokerConnection.request(Consts.clientTypeUpdateSubject, reqBytes, Duration.ofSeconds(30));
         } catch (Exception e) {
-           handleError(String.format("sendClientTypeUpdateReq: %s",e.getMessage()));
+            handleError(String.format("sendClientTypeUpdateReq: %s", e.getMessage()));
         }
     }
 
@@ -318,20 +326,23 @@ public class Superstream {
                 Map<String, Object> topicPartitionConfig = new HashMap<>();
                 if (!topicPartitions.isEmpty()) {
                     Map<String, Integer[]> topicPartitionsToSend = convertMap(topicPartitions);
-                    switch(this.type) {
+                    switch (this.type) {
                         case "producer":
-                        topicPartitionConfig.put("producer_topics_partitions", topicPartitionsToSend);
-                        topicPartitionConfig.put("consumer_group_topics_partitions", new HashMap<String, Integer[]>());
-                        break;
+                            topicPartitionConfig.put("producer_topics_partitions", topicPartitionsToSend);
+                            topicPartitionConfig.put("consumer_group_topics_partitions",
+                                    new HashMap<String, Integer[]>());
+                            break;
                         case "consumer":
-                        topicPartitionConfig.put("producer_topics_partitions", new HashMap<String, Integer[]>());
-                        topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
-                        break;
+                            topicPartitionConfig.put("producer_topics_partitions", new HashMap<String, Integer[]>());
+                            topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
+                            break;
                     }
                 }
                 byte[] byteConfig = objectMapper.writeValueAsBytes(topicPartitionConfig);
-                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "counters", clientID), byteCounters);
-                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID), byteConfig);
+                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "counters", clientID),
+                        byteCounters);
+                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID),
+                        byteConfig);
             } catch (Exception e) {
                 handleError("reportClientsUpdate: " + e.getMessage());
             }
@@ -420,7 +431,7 @@ public class Superstream {
                     String schemaID = (String) payload.get("schema_id");
                     ProducerSchemaID = schemaID;
                     break;
-                    
+
                 case "ToggleReduction":
                     Boolean enableReduction = (Boolean) payload.get("enable_reduction");
                     if (enableReduction) {
@@ -429,7 +440,7 @@ public class Superstream {
                         this.reductionEnabled = false;
                     }
                     break;
-                }
+            }
         } catch (Exception e) {
             handleError(("processUpdate: " + e.getMessage()));
         }
@@ -441,17 +452,20 @@ public class Superstream {
             reqData.put("schema_id", schemaID);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-            Message msg = brokerConnection.request(String.format(Consts.superstreamGetSchemaSubject, clientID),reqBytes, Duration.ofSeconds(30));
+            Message msg = brokerConnection.request(String.format(Consts.superstreamGetSchemaSubject, clientID),
+                    reqBytes, Duration.ofSeconds(30));
             if (msg == null) {
                 throw new Exception("Could not get descriptor");
             }
             @SuppressWarnings("unchecked")
-            Map<String, Object> respMap = objectMapper.readValue(new String(msg.getData(), StandardCharsets.UTF_8), Map.class);
+            Map<String, Object> respMap = objectMapper.readValue(new String(msg.getData(), StandardCharsets.UTF_8),
+                    Map.class);
             if (respMap.containsKey("desc") && respMap.get("desc") instanceof String) {
                 String descriptorBytesString = (String) respMap.get("desc");
                 String masterMsgName = (String) respMap.get("master_msg_name");
                 String fileName = (String) respMap.get("file_name");
-                Descriptors.Descriptor respDescriptor = compileMsgDescriptor(descriptorBytesString, masterMsgName, fileName);
+                Descriptors.Descriptor respDescriptor = compileMsgDescriptor(descriptorBytesString, masterMsgName,
+                        fileName);
                 if (respDescriptor != null) {
                     SchemaIDMap.put((String) respMap.get("schema_id"), respDescriptor);
                 } else {
@@ -465,40 +479,47 @@ public class Superstream {
         }
     }
 
-    private Descriptors.Descriptor compileMsgDescriptor(String descriptorBytesString, String masterMsgName, String fileName) {
+    private Descriptors.Descriptor compileMsgDescriptor(String descriptorBytesString, String masterMsgName,
+            String fileName) {
         try {
-                byte[] descriptorAsBytes = Base64.getDecoder().decode(descriptorBytesString);
-                if (descriptorAsBytes == null) {
-                    throw new Exception("error decoding descriptor bytes");
+            byte[] descriptorAsBytes = Base64.getDecoder().decode(descriptorBytesString);
+            if (descriptorAsBytes == null) {
+                throw new Exception("error decoding descriptor bytes");
+            }
+            FileDescriptorSet descriptorSet = FileDescriptorSet.parseFrom(descriptorAsBytes);
+            FileDescriptor fileDescriptor = null;
+            for (DescriptorProtos.FileDescriptorProto fdp : descriptorSet.getFileList()) {
+                if (fdp.getName().equals(fileName)) {
+                    fileDescriptor = FileDescriptor.buildFrom(fdp, new FileDescriptor[] {});
+                    break;
                 }
-                FileDescriptorSet descriptorSet = FileDescriptorSet.parseFrom(descriptorAsBytes);
-                FileDescriptor fileDescriptor = null;
-                for (DescriptorProtos.FileDescriptorProto fdp : descriptorSet.getFileList()) {
-                    if (fdp.getName().equals(fileName)) {
-                        fileDescriptor = FileDescriptor.buildFrom(fdp, new FileDescriptor[]{});
-                        break;
-                    }
-                }
+            }
 
-                if (fileDescriptor == null) {
-                    throw new Exception("file not found");
-                }
+            if (fileDescriptor == null) {
+                throw new Exception("file not found");
+            }
 
-                for (Descriptors.Descriptor md : fileDescriptor.getMessageTypes()) {
-                    if (md.getName().equals(masterMsgName)) {
-                        return md;
-                    }
+            for (Descriptors.Descriptor md : fileDescriptor.getMessageTypes()) {
+                if (md.getName().equals(masterMsgName)) {
+                    return md;
                 }
+            }
         } catch (Exception e) {
-            handleError(String.format("compileMsgDescriptor: %s",e.getMessage()));
+            handleError(String.format("compileMsgDescriptor: %s", e.getMessage()));
         }
         return null;
     }
 
     public void handleError(String msg) {
         if (brokerConnection != null) {
-            String message = String.format("[account name: %s][clientID: %d][sdk: java][version: %s] %s", accountName, clientID, Consts.sdkVersion, msg);
-            brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
+            if (clientID == 0) {
+                String message = String.format("[sdk: java][version: %s][connectionID: %s] %s", Consts.sdkVersion, msg);
+                brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
+            } else {
+                String message = String.format("[account name: %s][clientID: %d][sdk: java][version: %s] %s",
+                        accountName, clientID, Consts.sdkVersion, msg);
+                brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
+            }
         }
     }
 
@@ -506,28 +527,42 @@ public class Superstream {
         Map<String, Object> superstreamConfig = new HashMap<>();
 
         // Producer configurations
-        // Note: Handling of `producer_return_errors` and `producer_return_successes` is typically done programmatically in the Java client, `producer_flush_max_messages` does not exist in java
-        mapIfPresent(javaConfig, ProducerConfig.MAX_REQUEST_SIZE_CONFIG, superstreamConfig, "producer_max_messages_bytes");
+        // Note: Handling of `producer_return_errors` and `producer_return_successes` is
+        // typically done programmatically in the Java client,
+        // `producer_flush_max_messages` does not exist in java
+        mapIfPresent(javaConfig, ProducerConfig.MAX_REQUEST_SIZE_CONFIG, superstreamConfig,
+                "producer_max_messages_bytes");
         mapIfPresent(javaConfig, ProducerConfig.ACKS_CONFIG, superstreamConfig, "producer_required_acks");
         mapIfPresent(javaConfig, ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, superstreamConfig, "producer_timeout");
         mapIfPresent(javaConfig, ProducerConfig.RETRIES_CONFIG, superstreamConfig, "producer_retry_max");
         mapIfPresent(javaConfig, ProducerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "producer_retry_backoff");
-        mapIfPresent(javaConfig, ProducerConfig.COMPRESSION_TYPE_CONFIG, superstreamConfig, "producer_compression_level");
+        mapIfPresent(javaConfig, ProducerConfig.COMPRESSION_TYPE_CONFIG, superstreamConfig,
+                "producer_compression_level");
         // Consumer configurations
-        // Note: `consumer_return_errors`, `consumer_offsets_initial`, `consumer_offsets_retry_max`, `consumer_group_rebalance_timeout`, `consumer_group_rebalance_retry_max` does not exist in java
+        // Note: `consumer_return_errors`, `consumer_offsets_initial`,
+        // `consumer_offsets_retry_max`, `consumer_group_rebalance_timeout`,
+        // `consumer_group_rebalance_retry_max` does not exist in java
         mapIfPresent(javaConfig, ConsumerConfig.FETCH_MIN_BYTES_CONFIG, superstreamConfig, "consumer_fetch_min");
         mapIfPresent(javaConfig, ConsumerConfig.FETCH_MAX_BYTES_CONFIG, superstreamConfig, "consumer_fetch_default");
         mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "consumer_retry_backoff");
-        mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_max_wait_time");
+        mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, superstreamConfig,
+                "consumer_max_wait_time");
         mapIfPresent(javaConfig, ConsumerConfig.MAX_POLL_RECORDS_CONFIG, superstreamConfig,
                 "consumer_max_processing_time");
-        // mapIfPresent(javaConfig, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, superstreamConfig, "consumer_offset_auto_commit_enable"); 
+        // mapIfPresent(javaConfig, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
+        // superstreamConfig, "consumer_offset_auto_commit_enable");
         // TODO: handle boolean vars
-        mapIfPresent(javaConfig, ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_offset_auto_commit_interval");
-        mapIfPresent(javaConfig, ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, superstreamConfig, "consumer_group_session_timeout");
-        mapIfPresent(javaConfig, ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, superstreamConfig, "consumer_group_heart_beat_interval");
-        mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig, "consumer_group_rebalance_retry_back_off");
-        // mapIfPresent(javaConfig, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , superstreamConfig, "consumer_group_rebalance_reset_invalid_offsets"); // TODO: handle boolean vars
+        mapIfPresent(javaConfig, ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, superstreamConfig,
+                "consumer_offset_auto_commit_interval");
+        mapIfPresent(javaConfig, ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, superstreamConfig,
+                "consumer_group_session_timeout");
+        mapIfPresent(javaConfig, ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, superstreamConfig,
+                "consumer_group_heart_beat_interval");
+        mapIfPresent(javaConfig, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, superstreamConfig,
+                "consumer_group_rebalance_retry_back_off");
+        // mapIfPresent(javaConfig, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG ,
+        // superstreamConfig, "consumer_group_rebalance_reset_invalid_offsets"); //
+        // TODO: handle boolean vars
         mapIfPresent(javaConfig, ConsumerConfig.GROUP_ID_CONFIG, superstreamConfig, "consumer_group_id");
         // Common configurations
         mapIfPresent(javaConfig, ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, superstreamConfig, "servers");
@@ -541,7 +576,7 @@ public class Superstream {
         if (javaConfig.containsKey(javaKey)) {
             if (javaKey == ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) {
                 Object value = javaConfig.get(javaKey);
-                if (value instanceof String[]){
+                if (value instanceof String[]) {
                     superstreamConfig.put(superstreamKey, Arrays.toString((String[]) value));
                 } else if (value instanceof ArrayList) {
                     @SuppressWarnings("unchecked")
@@ -737,4 +772,3 @@ public class Superstream {
         }
     }
 }
-
