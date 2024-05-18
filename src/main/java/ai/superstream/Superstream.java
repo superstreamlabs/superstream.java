@@ -33,6 +33,9 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.util.JsonFormat;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.DescriptorProtos;
 
 import io.nats.client.Connection;
@@ -394,9 +397,12 @@ public class Superstream {
         }
     }
 
-    public byte[] jsonToProto(byte[] msgBytes) throws IOException {
+    public byte[] jsonToProto(byte[] msgBytes) throws Exception {
         try {
             String jsonString = new String(msgBytes);
+            if (!isJsonObject(jsonString)) {
+                jsonString = convertToJsonObject(jsonString);
+            }
             DynamicMessage.Builder newMessageBuilder = DynamicMessage.newBuilder(descriptor);
             JsonFormat.parser().merge(jsonString, newMessageBuilder);
             DynamicMessage message = newMessageBuilder.build();
@@ -404,12 +410,32 @@ public class Superstream {
         } catch (Exception e) {
             if (e.getMessage().contains("Cannot find field")) {
                 return msgBytes;
+            } else {
+                throw e;
             }
         }
-        return msgBytes;
     }
 
-    public byte[] protoToJson(byte[] msgBytes, Descriptors.Descriptor desc) throws IOException {
+    private boolean isJsonObject(String jsonString) {
+        try {
+            JsonParser.parseString(jsonString).getAsJsonObject();
+            return true;
+        } catch (JsonSyntaxException | IllegalStateException e) {
+            return false;
+        }
+    }
+
+    private String convertToJsonObject(String jsonString) throws Exception {
+        try {
+            JsonObject jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
+            return jsonObject.toString();
+        } catch (JsonSyntaxException e) {
+            throw new Exception("Invalid JSON syntax: " + jsonString, e);
+        }
+    }
+
+
+    public byte[] protoToJson(byte[] msgBytes, Descriptors.Descriptor desc) throws Exception {
         try {
             DynamicMessage message = DynamicMessage.parseFrom(desc, msgBytes);
             String jsonString = JsonFormat.printer().omittingInsignificantWhitespace().print(message);
@@ -417,9 +443,10 @@ public class Superstream {
         } catch (Exception e) {
             if (e.getMessage().contains("the input ended unexpectedly")) {
                 return msgBytes;
+            } else {
+                throw e;
             }
         }
-        return msgBytes;
     }
 
     private MessageHandler updatesHandler() {
