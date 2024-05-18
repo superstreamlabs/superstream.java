@@ -10,10 +10,9 @@ import com.google.protobuf.Descriptors;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 
-public class SuperstreamDeserializer<T> implements Deserializer<T>{
+public class SuperstreamDeserializer<T> implements Deserializer<T> {
     private Deserializer<T> originalDeserializer;
     private Superstream superstreamConnection;
-    
 
     public SuperstreamDeserializer() {
     }
@@ -22,13 +21,22 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
             System.out.println("Running Superstream Kafka Consumer");
-            String originalDeserializerClassName = configs.get(Consts.originalDeserializer) != null ? (String) configs.get(Consts.originalDeserializer) : null;
-            if (originalDeserializerClassName == null) {
+            Object originalDeserializerObj = configs.get(Consts.originalDeserializer);
+            if (originalDeserializerObj == null) {
                 throw new Exception("original deserializer is required");
             }
-            Class<?> originalDeserializerClass = Class.forName(originalDeserializerClassName);
+            Class<?> originalDeserializerClass;
+
+            if (originalDeserializerObj instanceof String) {
+                originalDeserializerClass = Class.forName((String) originalDeserializerObj);
+            } else if (originalDeserializerObj instanceof Class) {
+                originalDeserializerClass = (Class<?>) originalDeserializerObj;
+            } else {
+                throw new Exception("Invalid type for original deserializer");
+            }
             @SuppressWarnings("unchecked")
-            Deserializer<T> originalDeserializerT = (Deserializer<T>) originalDeserializerClass.getDeclaredConstructor().newInstance();
+            Deserializer<T> originalDeserializerT = (Deserializer<T>) originalDeserializerClass.getDeclaredConstructor()
+                    .newInstance();
             this.originalDeserializer = originalDeserializerT;
             this.originalDeserializer.configure(configs, isKey);
             Superstream superstreamConn = (Superstream) configs.get(Consts.superstreamConnectionKey);
@@ -48,15 +56,24 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
 
     @Override
     public T deserialize(String topic, byte[] data) {
+        if (originalDeserializer == null) {
+            return null;
+        }
         T deserializedData = originalDeserializer.deserialize(topic, data);
         return deserializedData;
     }
 
     @Override
     public T deserialize(String topic, Headers headers, byte[] data) {
+        if (originalDeserializer == null) {
+            return null;
+        }
         String schemaId = null;
         byte[] dataToDesrialize = data;
-        if (this.superstreamConnection != null){
+        if (dataToDesrialize == null) {
+            this.originalDeserializer.deserialize(topic, dataToDesrialize);
+        }
+        if (this.superstreamConnection != null) {
             this.superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);
         }
         Header header = headers.lastHeader("superstream_schema");
@@ -65,7 +82,7 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
         }
         if (schemaId != null) {
             Descriptors.Descriptor desc = superstreamConnection.SchemaIDMap.get(schemaId);
-            if (desc == null){
+            if (desc == null) {
                 superstreamConnection.sendGetSchemaRequest(schemaId);
                 desc = superstreamConnection.SchemaIDMap.get(schemaId);
                 if (desc == null) {
@@ -77,14 +94,15 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
             try {
                 byte[] supertstreamDeserialized = superstreamConnection.protoToJson(data, desc);
                 dataToDesrialize = supertstreamDeserialized;
-                superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(supertstreamDeserialized.length);
+                superstreamConnection.clientCounters
+                        .incrementTotalBytesBeforeReduction(supertstreamDeserialized.length);
                 superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyConsumed();
             } catch (Exception e) {
                 superstreamConnection.handleError(String.format("error deserializing data: %s", e.getMessage()));
                 return null;
             }
         } else {
-            if (superstreamConnection != null){
+            if (superstreamConnection != null) {
                 superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(data.length);
                 superstreamConnection.clientCounters.incrementTotalMessagesFailedConsume();
             }
@@ -95,8 +113,10 @@ public class SuperstreamDeserializer<T> implements Deserializer<T>{
 
     @Override
     public void close() {
-        originalDeserializer.close();
-        if (superstreamConnection != null){
+        if (originalDeserializer != null) {
+            originalDeserializer.close();
+        }
+        if (superstreamConnection != null) {
             superstreamConnection.close();
         }
     }

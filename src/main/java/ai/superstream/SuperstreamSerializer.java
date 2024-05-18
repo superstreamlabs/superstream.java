@@ -8,24 +8,33 @@ import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.Serializer;
 
-public class SuperstreamSerializer<T> implements Serializer<T>{
+public class SuperstreamSerializer<T> implements Serializer<T> {
     private Serializer<T> originalSerializer;
     private Superstream superstreamConnection;
 
     public SuperstreamSerializer() {
     }
-    
+
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
             System.out.println("Running Superstream Kafka Producer");
-            String originalSerializerClassName = (String) configs.get(Consts.originalSerializer);
-            if (originalSerializerClassName == null) {
+            Object originalSerializerObj = configs.get(Consts.originalSerializer);
+            if (originalSerializerObj == null) {
                 throw new Exception("original serializer is required");
             }
-            Class<?> originalSerializerClass = Class.forName(originalSerializerClassName);
+            Class<?> originalSerializerClass;
+
+            if (originalSerializerObj instanceof String) {
+                originalSerializerClass = Class.forName((String) originalSerializerObj);
+            } else if (originalSerializerObj instanceof Class) {
+                originalSerializerClass = (Class<?>) originalSerializerObj;
+            } else {
+                throw new Exception("Invalid type for original serializer");
+            }
             @SuppressWarnings("unchecked")
-            Serializer<T> originalSerializerT = (Serializer<T>) originalSerializerClass.getDeclaredConstructor().newInstance();
+            Serializer<T> originalSerializerT = (Serializer<T>) originalSerializerClass.getDeclaredConstructor()
+                    .newInstance();
             this.originalSerializer = originalSerializerT;
             this.originalSerializer.configure(configs, isKey);
             Superstream superstreamConn = (Superstream) configs.get(Consts.superstreamConnectionKey);
@@ -45,23 +54,34 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
 
     @Override
     public byte[] serialize(String topic, T data) {
+        if (originalSerializer == null) {
+            return null;
+        }
         byte[] serializedData = originalSerializer.serialize(topic, data);
         return serializedData;
     }
 
     @Override
     public byte[] serialize(String topic, Headers headers, T data) {
+        if (originalSerializer == null) {
+            return null;
+        }
         byte[] serializedData = this.originalSerializer.serialize(topic, data);
         byte[] serializedResult;
-        if (superstreamConnection != null)  {
+        if (serializedData == null) {
+            return null;
+        }
+        if (superstreamConnection != null) {
             if (superstreamConnection.reductionEnabled == true) {
-                if (superstreamConnection.descriptor != null){
+                if (superstreamConnection.descriptor != null) {
                     try {
-                        Header header = new RecordHeader("superstream_schema",  superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
+                        Header header = new RecordHeader("superstream_schema",
+                                superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
                         headers.add(header);
                         byte[] superstreamSerialized = superstreamConnection.jsonToProto(serializedData);
                         superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
-                        superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(superstreamSerialized.length);
+                        superstreamConnection.clientCounters
+                                .incrementTotalBytesAfterReduction(superstreamSerialized.length);
                         superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
                         serializedResult = superstreamSerialized;
                     } catch (Exception e) {
@@ -93,8 +113,10 @@ public class SuperstreamSerializer<T> implements Serializer<T>{
 
     @Override
     public void close() {
-        originalSerializer.close();
-        if (superstreamConnection != null){
+        if (this.originalSerializer != null) {
+            originalSerializer.close();
+        }
+        if (superstreamConnection != null) {
             superstreamConnection.close();
         }
     }
