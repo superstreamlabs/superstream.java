@@ -407,6 +407,9 @@ public class Superstream {
             if (jsonString == null || jsonString.isEmpty()) {
                 return new JsonToProtoResult(false, msgBytes);
             }
+            if (jsonString != null && jsonString.length() > 2 && jsonString.startsWith("\"{") && jsonString.endsWith("}\"")) {
+                jsonString = jsonString.substring(1, jsonString.length() - 1);
+            }    
             DynamicMessage.Builder newMessageBuilder = DynamicMessage.newBuilder(descriptor);
             JsonFormat.parser().merge(jsonString, newMessageBuilder);
             DynamicMessage message = newMessageBuilder.build();
