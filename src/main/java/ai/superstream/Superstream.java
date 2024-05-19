@@ -432,7 +432,7 @@ public class Superstream {
     private static String convertEscapedJsonString(String escapedJsonString) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode = mapper.readTree(escapedJsonString);
-        return mapper.writeValueAsString(jsonNode);
+        return mapper.writeValueAsString(jsonNode).replace("\\\"", "\"").replace("\\\\", "\\");
     }
 
 
