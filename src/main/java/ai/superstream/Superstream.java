@@ -404,6 +404,9 @@ public class Superstream {
             if (!isJsonObject(jsonString)) {
                 jsonString = convertEscapedJsonString(jsonString);
             }
+            if (jsonString == null || jsonString.isEmpty()) {
+                return msgBytes;
+            }
             DynamicMessage.Builder newMessageBuilder = DynamicMessage.newBuilder(descriptor);
             JsonFormat.parser().merge(jsonString, newMessageBuilder);
             DynamicMessage message = newMessageBuilder.build();
