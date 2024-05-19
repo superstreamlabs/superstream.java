@@ -398,25 +398,39 @@ public class Superstream {
         }
     }
 
-    public byte[] jsonToProto(byte[] msgBytes) throws Exception {
+    public JsonToProtoResult jsonToProto(byte[] msgBytes) throws Exception {
         try {
             String jsonString = new String(msgBytes);
             if (!isJsonObject(jsonString)) {
                 jsonString = convertEscapedJsonString(jsonString);
             }
             if (jsonString == null || jsonString.isEmpty()) {
-                return msgBytes;
+                return new JsonToProtoResult(false, msgBytes);
             }
             DynamicMessage.Builder newMessageBuilder = DynamicMessage.newBuilder(descriptor);
             JsonFormat.parser().merge(jsonString, newMessageBuilder);
             DynamicMessage message = newMessageBuilder.build();
-            return message.toByteArray();
+            return new JsonToProtoResult(true, message.toByteArray());
         } catch (Exception e) {
-            if (e.getMessage().contains("Cannot find field")) {
-                return msgBytes;
-            } else {
-                throw e;
-            }
+            return new JsonToProtoResult(false, msgBytes);
+        }
+    }
+
+    public class JsonToProtoResult {
+        private final boolean success;
+        private final byte[] messageBytes;
+    
+        public JsonToProtoResult(boolean success, byte[] messageBytes) {
+            this.success = success;
+            this.messageBytes = messageBytes;
+        }
+    
+        public boolean isSuccess() {
+            return success;
+        }
+    
+        public byte[] getMessageBytes() {
+            return messageBytes;
         }
     }
 
