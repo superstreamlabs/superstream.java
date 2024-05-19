@@ -27,6 +27,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
 import com.google.protobuf.Descriptors;
@@ -401,7 +402,7 @@ public class Superstream {
         try {
             String jsonString = new String(msgBytes);
             if (!isJsonObject(jsonString)) {
-                jsonString = convertToJsonObject(jsonString);
+                jsonString = convertEscapedJsonString(jsonString);
             }
             DynamicMessage.Builder newMessageBuilder = DynamicMessage.newBuilder(descriptor);
             JsonFormat.parser().merge(jsonString, newMessageBuilder);
@@ -425,13 +426,10 @@ public class Superstream {
         }
     }
 
-    private String convertToJsonObject(String jsonString) throws Exception {
-        try {
-            JsonObject jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
-            return jsonObject.toString();
-        } catch (JsonSyntaxException e) {
-            throw new Exception("Invalid JSON syntax: " + jsonString, e);
-        }
+    private static String convertEscapedJsonString(String escapedJsonString) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode = mapper.readTree(escapedJsonString);
+        return mapper.writeValueAsString(jsonNode);
     }
 
 
