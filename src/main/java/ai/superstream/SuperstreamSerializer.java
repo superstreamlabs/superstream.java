@@ -75,15 +75,15 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             if (superstreamConnection.reductionEnabled == true) {
                 if (superstreamConnection.descriptor != null) {
                     try {
-                        Header header = new RecordHeader("superstream_schema",
-                                superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
-                        headers.add(header);
                         byte[] superstreamSerialized = superstreamConnection.jsonToProto(serializedData);
                         superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
                         superstreamConnection.clientCounters
-                                .incrementTotalBytesAfterReduction(superstreamSerialized.length);
+                        .incrementTotalBytesAfterReduction(superstreamSerialized.length);
                         superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
                         serializedResult = superstreamSerialized;
+                        Header header = new RecordHeader("superstream_schema",
+                                superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
+                        headers.add(header);
                     } catch (Exception e) {
                         serializedResult = serializedData;
                         superstreamConnection.handleError(String.format("error serializing data: ", e.getMessage()));
