@@ -27,12 +27,16 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.util.JsonFormat;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.DescriptorProtos;
 
 import io.nats.client.Connection;
@@ -394,22 +398,62 @@ public class Superstream {
         }
     }
 
-    public byte[] jsonToProto(byte[] msgBytes) throws IOException {
+    public JsonToProtoResult jsonToProto(byte[] msgBytes) throws Exception {
         try {
             String jsonString = new String(msgBytes);
+            if (!isJsonObject(jsonString)) {
+                jsonString = convertEscapedJsonString(jsonString);
+            }
+            if (jsonString == null || jsonString.isEmpty()) {
+                return new JsonToProtoResult(false, msgBytes);
+            }
+            if (jsonString != null && jsonString.length() > 2 && jsonString.startsWith("\"{") && jsonString.endsWith("}\"")) {
+                jsonString = jsonString.substring(1, jsonString.length() - 1);
+            }    
             DynamicMessage.Builder newMessageBuilder = DynamicMessage.newBuilder(descriptor);
             JsonFormat.parser().merge(jsonString, newMessageBuilder);
             DynamicMessage message = newMessageBuilder.build();
-            return message.toByteArray();
+            return new JsonToProtoResult(true, message.toByteArray());
         } catch (Exception e) {
-            if (e.getMessage().contains("Cannot find field")) {
-                return msgBytes;
-            }
+            return new JsonToProtoResult(false, msgBytes);
         }
-        return msgBytes;
     }
 
-    public byte[] protoToJson(byte[] msgBytes, Descriptors.Descriptor desc) throws IOException {
+    public class JsonToProtoResult {
+        private final boolean success;
+        private final byte[] messageBytes;
+    
+        public JsonToProtoResult(boolean success, byte[] messageBytes) {
+            this.success = success;
+            this.messageBytes = messageBytes;
+        }
+    
+        public boolean isSuccess() {
+            return success;
+        }
+    
+        public byte[] getMessageBytes() {
+            return messageBytes;
+        }
+    }
+
+    private boolean isJsonObject(String jsonString) {
+        try {
+            JsonParser.parseString(jsonString).getAsJsonObject();
+            return true;
+        } catch (JsonSyntaxException | IllegalStateException e) {
+            return false;
+        }
+    }
+
+    private static String convertEscapedJsonString(String escapedJsonString) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode = mapper.readTree(escapedJsonString);
+        return mapper.writeValueAsString(jsonNode).replace("\\\"", "\"").replace("\\\\", "\\");
+    }
+
+
+    public byte[] protoToJson(byte[] msgBytes, Descriptors.Descriptor desc) throws Exception {
         try {
             DynamicMessage message = DynamicMessage.parseFrom(desc, msgBytes);
             String jsonString = JsonFormat.printer().omittingInsignificantWhitespace().print(message);
@@ -417,9 +461,10 @@ public class Superstream {
         } catch (Exception e) {
             if (e.getMessage().contains("the input ended unexpectedly")) {
                 return msgBytes;
+            } else {
+                throw e;
             }
         }
-        return msgBytes;
     }
 
     private MessageHandler updatesHandler() {

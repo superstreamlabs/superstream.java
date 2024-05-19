@@ -8,6 +8,8 @@ import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.Serializer;
 
+import ai.superstream.Superstream.JsonToProtoResult;
+
 public class SuperstreamSerializer<T> implements Serializer<T> {
     private Serializer<T> originalSerializer;
     private Superstream superstreamConnection;
@@ -75,15 +77,21 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             if (superstreamConnection.reductionEnabled == true) {
                 if (superstreamConnection.descriptor != null) {
                     try {
-                        Header header = new RecordHeader("superstream_schema",
-                                superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
-                        headers.add(header);
-                        byte[] superstreamSerialized = superstreamConnection.jsonToProto(serializedData);
-                        superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
-                        superstreamConnection.clientCounters
-                                .incrementTotalBytesAfterReduction(superstreamSerialized.length);
-                        superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
-                        serializedResult = superstreamSerialized;
+                        JsonToProtoResult jsonToProtoResult = superstreamConnection.jsonToProto(serializedData);
+                        if (jsonToProtoResult.isSuccess()){
+                            byte[] superstreamSerialized = jsonToProtoResult.getMessageBytes();
+                            superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
+                            superstreamConnection.clientCounters
+                            .incrementTotalBytesAfterReduction(superstreamSerialized.length);
+                            superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
+                            serializedResult = superstreamSerialized;
+                            Header header = new RecordHeader("superstream_schema",
+                                    superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
+                                    headers.add(header);
+                        } else {
+                            serializedResult = serializedData;
+                            superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
+                        }
                     } catch (Exception e) {
                         serializedResult = serializedData;
                         superstreamConnection.handleError(String.format("error serializing data: ", e.getMessage()));
