@@ -91,19 +91,19 @@ public class Superstream {
     }
 
     public void init() {
-            executorService.submit(() -> {
-                try {
-                        initializeNatsConnection(token, host);
-                        if (this.brokerConnection != null) {
-                            registerClient(configs);
-                            subscribeToUpdates();
-                            reportClientsUpdate();
-                            sendClientTypeUpdateReq();
-                        }
-                    } catch (Exception e) {
-                        handleError(e.getMessage());
+        executorService.submit(() -> {
+            try {
+                    initializeNatsConnection(token, host);
+                    if (this.brokerConnection != null) {
+                        registerClient(configs);
+                        subscribeToUpdates();
+                        reportClientsUpdate();
+                        sendClientTypeUpdateReq();
                     }
-            });
+                } catch (Exception e) {
+                    handleError(e.getMessage());
+                }
+        });
     }
 
     public void close() {
@@ -249,7 +249,7 @@ public class Superstream {
         KafkaConsumer<String, String> consumer = null;
         try {
             consumer = new KafkaConsumer<>(consumerProps);
-            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(1500));
+            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(5000));
             if (partitions == null || partitions.isEmpty()) {
                 if (consumer != null) {
                     consumer.close();
@@ -258,7 +258,7 @@ public class Superstream {
             }
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
             consumer.assign(Collections.singletonList(topicPartition));
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1500));
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(5000));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
                 break;

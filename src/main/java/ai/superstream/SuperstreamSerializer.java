@@ -72,7 +72,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
         if (serializedData == null) {
             return null;
         }
-        if (superstreamConnection != null) {
+        if (superstreamConnection != null && superstreamConnection.brokerConnection != null) {
             if (superstreamConnection.reductionEnabled == true) {
                 if (superstreamConnection.descriptor != null) {
                     try {
