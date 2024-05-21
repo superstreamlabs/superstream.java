@@ -247,6 +247,11 @@ public class Superstream {
             consumer = new KafkaConsumer<>(consumerProps);
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
             consumer.assign(Collections.singletonList(topicPartition));
+            try {
+                consumer.position(topicPartition);
+            } catch (Exception e) {
+                return "0";
+            }
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
