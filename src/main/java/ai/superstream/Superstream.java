@@ -91,17 +91,19 @@ public class Superstream {
     }
 
     public void init() {
-        try {
-            initializeNatsConnection(token, host);
-            if (this.brokerConnection != null) {
-                registerClient(configs);
-                subscribeToUpdates();
-                reportClientsUpdate();
-                sendClientTypeUpdateReq();
-            }
-        } catch (Exception e) {
-            handleError(e.getMessage());
-        }
+            executorService.submit(() -> {
+                try {
+                        initializeNatsConnection(token, host);
+                        if (this.brokerConnection != null) {
+                            registerClient(configs);
+                            subscribeToUpdates();
+                            reportClientsUpdate();
+                            sendClientTypeUpdateReq();
+                        }
+                    } catch (Exception e) {
+                        handleError(e.getMessage());
+                    }
+            });
     }
 
     public void close() {
