@@ -247,7 +247,7 @@ public class Superstream {
         KafkaConsumer<String, String> consumer = null;
         try {
             consumer = new KafkaConsumer<>(consumerProps);
-            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(150));
+            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(1500));
             if (partitions == null || partitions.isEmpty()) {
                 if (consumer != null) {
                     consumer.close();
@@ -256,7 +256,7 @@ public class Superstream {
             }
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
             consumer.assign(Collections.singletonList(topicPartition));
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(150));
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1500));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
                 break;
