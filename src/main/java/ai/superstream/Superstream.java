@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -24,6 +25,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
@@ -245,13 +247,12 @@ public class Superstream {
         KafkaConsumer<String, String> consumer = null;
         try {
             consumer = new KafkaConsumer<>(consumerProps);
-            TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
-            consumer.assign(Collections.singletonList(topicPartition));
-            try {
-                consumer.position(topicPartition);
-            } catch (Exception e) {
+            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(500));
+            if (partitions == null || partitions.isEmpty()) {
                 return "0";
             }
+            TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
+            consumer.assign(Collections.singletonList(topicPartition));
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
