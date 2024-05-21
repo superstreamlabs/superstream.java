@@ -241,12 +241,13 @@ public class Superstream {
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
+        consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
 
         String connectionId = null;
         KafkaConsumer<String, String> consumer = null;
         try {
             consumer = new KafkaConsumer<>(consumerProps);
-            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(500));
+            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(150));
             if (partitions == null || partitions.isEmpty()) {
                 if (consumer != null) {
                     consumer.close();
@@ -255,7 +256,7 @@ public class Superstream {
             }
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
             consumer.assign(Collections.singletonList(topicPartition));
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(150));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
                 break;
