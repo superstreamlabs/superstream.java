@@ -135,8 +135,7 @@ public class Superstream {
                                         reqData.put("client_id", clientID);
                                         ObjectMapper mapper = new ObjectMapper();
                                         byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-                                        brokerConnection.request(Consts.clientReconnectionUpdateSubject, reqBytes,
-                                                Duration.ofSeconds(30));
+                                        brokerConnection.publish(Consts.clientReconnectionUpdateSubject, reqBytes);
                                     }
                                 } catch (Exception e) {
                                     System.out.println(
@@ -191,7 +190,7 @@ public class Superstream {
             reqData.put("connection_id", kafkaConnectionID);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-            Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(30));
+            Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(5));
             if (reply != null) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> replyData = mapper.readValue(reply.getData(), Map.class);
@@ -249,6 +248,9 @@ public class Superstream {
             consumer = new KafkaConsumer<>(consumerProps);
             List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(500));
             if (partitions == null || partitions.isEmpty()) {
+                if (consumer != null) {
+                    consumer.close();
+                }
                 return "0";
             }
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
@@ -260,6 +262,9 @@ public class Superstream {
             }
         } catch (Exception e) {
             handleError(String.format("consumeConnectionID: %s", e.getMessage()));
+            if (consumer != null) {
+                consumer.close();
+            }
             return "0";
         } finally {
             if (consumer != null) {
@@ -330,7 +335,7 @@ public class Superstream {
             reqData.put("type", type);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-            brokerConnection.request(Consts.clientTypeUpdateSubject, reqBytes, Duration.ofSeconds(30));
+            brokerConnection.publish(Consts.clientTypeUpdateSubject, reqBytes);
         } catch (Exception e) {
             handleError(String.format("sendClientTypeUpdateReq: %s", e.getMessage()));
         }
@@ -522,7 +527,7 @@ public class Superstream {
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             Message msg = brokerConnection.request(String.format(Consts.superstreamGetSchemaSubject, clientID),
-                    reqBytes, Duration.ofSeconds(30));
+                    reqBytes, Duration.ofSeconds(5));
             if (msg == null) {
                 throw new Exception("Could not get descriptor");
             }
