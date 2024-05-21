@@ -20,7 +20,6 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
-            System.out.println("Running Superstream Kafka Consumer");
             Object originalDeserializerObj = configs.get(Consts.originalDeserializer);
             if (originalDeserializerObj == null) {
                 throw new Exception("original deserializer is required");
@@ -41,7 +40,7 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
             this.originalDeserializer.configure(configs, isKey);
             Superstream superstreamConn = (Superstream) configs.get(Consts.superstreamConnectionKey);
             if (superstreamConn == null) {
-                System.out.println("Failed to connect to Superstream - Running Kafka Consumer");
+                System.out.println("Failed to connect to Superstream");
             } else {
                 this.superstreamConnection = superstreamConn;
             }
