@@ -247,7 +247,12 @@ public class Superstream {
             consumer = new KafkaConsumer<>(consumerProps);
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
             consumer.assign(Collections.singletonList(topicPartition));
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(10));
+            try {
+                consumer.position(topicPartition);
+            } catch (Exception e) {
+                return "0";
+            }
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
                 break;
@@ -261,8 +266,7 @@ public class Superstream {
             }
         }
         if (connectionId == null) {
-            handleError(
-                    String.format("consumeConnectionID: Unable to consume connection ID, reached 10 second timeout"));
+            connectionId = "0";
         }
         return connectionId;
     }
