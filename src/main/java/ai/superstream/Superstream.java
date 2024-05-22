@@ -268,28 +268,29 @@ public class Superstream {
         } catch (Exception e) {
             if (e.getMessage().toLowerCase().contains("timeout")) {
                 // retry in case of timeout
-                if (consumer != null) {
-                    try {
+                try {
+                    Thread.sleep(10000);
+                    if (consumer == null) {
                         consumer = new KafkaConsumer<>(consumerProps);
-                        List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
-                        if (partitions == null || partitions.isEmpty()) {
-                            if (consumer != null) {
-                                consumer.close();
-                            }
-                            return "0";
+                    }
+                    List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
+                    if (partitions == null || partitions.isEmpty()) {
+                        if (consumer != null) {
+                            consumer.close();
                         }
-                        TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
-                        consumer.assign(Collections.singletonList(topicPartition));
-                        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
-                        for (ConsumerRecord<String, String> record : records) {
-                            connectionId = record.value();
-                            break;
-                        }
-                    } catch (Exception e2) {}
-                }
+                        return "0";
+                    }
+                    TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
+                    consumer.assign(Collections.singletonList(topicPartition));
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
+                    for (ConsumerRecord<String, String> record : records) {
+                        connectionId = record.value();
+                        break;
+                    }
+                } catch (Exception e2) {}
                 return "0";
             }
-            if (connectionId == null){
+            if (connectionId == null || connectionId == "0"){
                 handleError(String.format("consumeConnectionID: %s", e.getMessage()));
                 if (consumer != null) {
                     consumer.close();
