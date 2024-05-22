@@ -288,7 +288,6 @@ public class Superstream {
                         break;
                     }
                 } catch (Exception e2) {}
-                return "0";
             }
             if (connectionId == null || connectionId == "0"){
                 handleError(String.format("consumeConnectionID: %s", e.getMessage()));
@@ -296,6 +295,8 @@ public class Superstream {
                     consumer.close();
                 }
                 return "0";
+            } else {
+                return connectionId;
             }
         } finally {
             if (consumer != null) {
