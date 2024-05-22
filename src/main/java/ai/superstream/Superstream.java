@@ -728,11 +728,13 @@ public class Superstream {
         }
         List<Object> interceptors = null;
         Object interceptorsValue =configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
-        if (interceptorsValue != null) {
-            interceptors = Arrays.asList(interceptorsValue);
-            interceptors.add(interceptorToAdd);
-        } else {
-            interceptors = Arrays.asList(interceptorToAdd);
+        if (interceptorToAdd != "") {
+            if (interceptorsValue != null) {
+                interceptors = new ArrayList<>(Arrays.asList(interceptorsValue));
+                interceptors.add(interceptorToAdd);
+            } else {
+                interceptors = Arrays.asList(interceptorToAdd);
+            }
         }
         
         if (interceptors != null) {
