@@ -77,7 +77,7 @@ public class Superstream {
     public String type;
     public Boolean reductionEnabled;
     public Map<String, Set<Integer>> topicPartitions = new ConcurrentHashMap<>();
-    public ExecutorService executorService = Executors.newCachedThreadPool();
+    public ExecutorService executorService = Executors.newFixedThreadPool(3);
     private Integer kafkaConnectionID = 0;
     public Boolean superstreamReady = false;
 
@@ -384,8 +384,8 @@ public class Superstream {
     }
 
     public void reportClientsUpdate() {
-        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-        executorService.scheduleAtFixedRate(() -> {
+        ScheduledExecutorService singleExecutorService = Executors.newSingleThreadScheduledExecutor();
+        singleExecutorService.scheduleAtFixedRate(() -> {
             try {
                 byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
                 Map<String, Object> topicPartitionConfig = new HashMap<>();
