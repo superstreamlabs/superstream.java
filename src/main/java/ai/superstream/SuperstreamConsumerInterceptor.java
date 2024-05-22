@@ -3,6 +3,7 @@ package ai.superstream;
 import java.util.Map;
 
 import org.apache.kafka.clients.consumer.ConsumerInterceptor;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -14,11 +15,10 @@ public class SuperstreamConsumerInterceptor<K, V> implements ConsumerInterceptor
     @Override
     public ConsumerRecords<K, V> onConsume(ConsumerRecords<K, V> records) {
         if (this.superstreamConnection != null) {
-            records.forEach(record -> {
-                this.superstreamConnection.executorService.submit(() -> {
-                    this.superstreamConnection.updateTopicPartitions(record.topic(), record.partition());
-                });
-            });
+            if (!records.isEmpty()) {
+                ConsumerRecord<K, V> firstRecord = records.iterator().next();
+                this.superstreamConnection.updateTopicPartitions(firstRecord.topic(), firstRecord.partition());
+            } 
         };
         return records;
     }

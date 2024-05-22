@@ -412,7 +412,6 @@ public class Superstream {
                 handleError("reportClientsUpdate: " + e.getMessage());
             }
         }, 0, 30, TimeUnit.SECONDS);
-        singleExecutorService.shutdown();
     }
 
     public static Map<String, Integer[]> convertMap(Map<String, Set<Integer>> topicPartitions) {
