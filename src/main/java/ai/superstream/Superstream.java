@@ -79,6 +79,7 @@ public class Superstream {
     public Map<String, Set<Integer>> topicPartitions = new ConcurrentHashMap<>();
     public ExecutorService executorService = Executors.newCachedThreadPool();
     private Integer kafkaConnectionID = 0;
+    public Boolean superstreamReady = false;
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
             Boolean enableReduction, String type) {
@@ -99,6 +100,7 @@ public class Superstream {
                         subscribeToUpdates();
                         reportClientsUpdate();
                         sendClientTypeUpdateReq();
+                        superstreamReady = true;
                     }
                 } catch (Exception e) {
                     handleError(e.getMessage());

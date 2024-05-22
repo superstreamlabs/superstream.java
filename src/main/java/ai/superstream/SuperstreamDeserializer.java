@@ -73,20 +73,19 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
             this.originalDeserializer.deserialize(topic, dataToDesrialize);
         }
 
-        if (this.superstreamConnection.brokerConnection == null) {
+        if (!this.superstreamConnection.superstreamReady) {
             int totalWaitTime = 60;
             int checkInterval = 5;  
             try {
                 for (int i = 0; i < totalWaitTime; i += checkInterval) {
-                    if (this.superstreamConnection.brokerConnection != null) {
-                        System.out.println("Condition met!");
+                    if (this.superstreamConnection.superstreamReady) {
                         break;
                     }
                     Thread.sleep(checkInterval * 1000);
                 }
             } catch (Exception e) {}
         }
-        if (this.superstreamConnection.brokerConnection == null) {
+        if (!this.superstreamConnection.superstreamReady) {
             System.out.println("superstream: cannot connect with superstream");
             return null;
         }
