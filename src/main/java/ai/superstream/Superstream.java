@@ -251,7 +251,7 @@ public class Superstream {
         KafkaConsumer<String, String> consumer = null;
         try {
             consumer = new KafkaConsumer<>(consumerProps);
-            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(5000));
+            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
             if (partitions == null || partitions.isEmpty()) {
                 if (consumer != null) {
                     consumer.close();
@@ -260,17 +260,42 @@ public class Superstream {
             }
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
             consumer.assign(Collections.singletonList(topicPartition));
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(5000));
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
                 break;
             }
         } catch (Exception e) {
-            handleError(String.format("consumeConnectionID: %s", e.getMessage()));
-            if (consumer != null) {
-                consumer.close();
+            if (e.getMessage().toLowerCase().contains("timeout")) {
+                // retry in case of timeout
+                if (consumer != null) {
+                    try {
+                        consumer = new KafkaConsumer<>(consumerProps);
+                        List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
+                        if (partitions == null || partitions.isEmpty()) {
+                            if (consumer != null) {
+                                consumer.close();
+                            }
+                            return "0";
+                        }
+                        TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
+                        consumer.assign(Collections.singletonList(topicPartition));
+                        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
+                        for (ConsumerRecord<String, String> record : records) {
+                            connectionId = record.value();
+                            break;
+                        }
+                    } catch (Exception e2) {}
+                }
+                return "0";
             }
-            return "0";
+            if (connectionId == null){
+                handleError(String.format("consumeConnectionID: %s", e.getMessage()));
+                if (consumer != null) {
+                    consumer.close();
+                }
+                return "0";
+            }
         } finally {
             if (consumer != null) {
                 consumer.close();
@@ -676,14 +701,10 @@ public class Superstream {
         if (isInnerConsumer != null && isInnerConsumer.equals("true")) {
             return configs;
         }
-        String interceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        String interceptorToAdd = "";
         switch (type) {
             case "producer":
-                if (interceptors != null && !interceptors.isEmpty()) {
-                    interceptors += "," + SuperstreamProducerInterceptor.class.getName();
-                } else {
-                    interceptors = SuperstreamProducerInterceptor.class.getName();
-                }
+                interceptorToAdd = SuperstreamProducerInterceptor.class.getName();
                 if (configs.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
                     if (!configs.containsKey(Consts.originalSerializer)) {
                         configs.put(Consts.originalSerializer,
@@ -694,11 +715,7 @@ public class Superstream {
                 }
                 break;
             case "consumer":
-                if (interceptors != null && !interceptors.isEmpty()) {
-                    interceptors += "," + SuperstreamConsumerInterceptor.class.getName();
-                } else {
-                    interceptors = SuperstreamConsumerInterceptor.class.getName();
-                }
+                interceptorToAdd = SuperstreamConsumerInterceptor.class.getName();
                 if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
                     if (!configs.containsKey(Consts.originalDeserializer)) {
                         configs.put(Consts.originalDeserializer,
@@ -709,6 +726,15 @@ public class Superstream {
                 }
                 break;
         }
+        List<Object> interceptors = null;
+        Object interceptorsValue =configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        if (interceptorsValue != null) {
+            interceptors = Arrays.asList(interceptorsValue);
+            interceptors.add(interceptorToAdd);
+        } else {
+            interceptors = Arrays.asList(interceptorToAdd);
+        }
+        
         if (interceptors != null) {
             configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
         }
