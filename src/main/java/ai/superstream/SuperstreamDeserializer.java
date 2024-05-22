@@ -20,7 +20,6 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
-            System.out.println("Running Superstream Kafka Consumer");
             Object originalDeserializerObj = configs.get(Consts.originalDeserializer);
             if (originalDeserializerObj == null) {
                 throw new Exception("original deserializer is required");
@@ -41,7 +40,7 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
             this.originalDeserializer.configure(configs, isKey);
             Superstream superstreamConn = (Superstream) configs.get(Consts.superstreamConnectionKey);
             if (superstreamConn == null) {
-                System.out.println("Failed to connect to Superstream - Running Kafka Consumer");
+                System.out.println("Failed to connect to Superstream");
             } else {
                 this.superstreamConnection = superstreamConn;
             }
@@ -72,6 +71,23 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
         byte[] dataToDesrialize = data;
         if (dataToDesrialize == null) {
             this.originalDeserializer.deserialize(topic, dataToDesrialize);
+        }
+
+        if (!this.superstreamConnection.superstreamReady) {
+            int totalWaitTime = 60;
+            int checkInterval = 5;  
+            try {
+                for (int i = 0; i < totalWaitTime; i += checkInterval) {
+                    if (this.superstreamConnection.superstreamReady) {
+                        break;
+                    }
+                    Thread.sleep(checkInterval * 1000);
+                }
+            } catch (Exception e) {}
+        }
+        if (!this.superstreamConnection.superstreamReady) {
+            System.out.println("superstream: cannot connect with superstream");
+            return null;
         }
         if (this.superstreamConnection != null) {
             this.superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);

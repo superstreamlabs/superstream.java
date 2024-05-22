@@ -13,9 +13,9 @@ public class SuperstreamProducerInterceptor<K, V> implements ProducerInterceptor
     @Override
     public ProducerRecord<K, V> onSend(ProducerRecord<K, V> record) {
         if (this.superstreamConnection != null) {
-            this.superstreamConnection.executorService.submit(() -> {
+            if (record != null) {
                 this.superstreamConnection.updateTopicPartitions(record.topic(), record.partition());
-            });
+            }
         }
         return record;
     }

@@ -77,8 +77,9 @@ public class Superstream {
     public String type;
     public Boolean reductionEnabled;
     public Map<String, Set<Integer>> topicPartitions = new ConcurrentHashMap<>();
-    public ExecutorService executorService = Executors.newCachedThreadPool();
+    public ExecutorService executorService = Executors.newFixedThreadPool(3);
     private Integer kafkaConnectionID = 0;
+    public Boolean superstreamReady = false;
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
             Boolean enableReduction, String type) {
@@ -91,17 +92,20 @@ public class Superstream {
     }
 
     public void init() {
-        try {
-            initializeNatsConnection(token, host);
-            if (this.brokerConnection != null) {
-                registerClient(configs);
-                subscribeToUpdates();
-                reportClientsUpdate();
-                sendClientTypeUpdateReq();
-            }
-        } catch (Exception e) {
-            handleError(e.getMessage());
-        }
+        executorService.submit(() -> {
+            try {
+                    initializeNatsConnection(token, host);
+                    if (this.brokerConnection != null) {
+                        registerClient(configs);
+                        subscribeToUpdates();
+                        reportClientsUpdate();
+                        sendClientTypeUpdateReq();
+                        superstreamReady = true;
+                    }
+                } catch (Exception e) {
+                    handleError(e.getMessage());
+                }
+        });
     }
 
     public void close() {
@@ -135,8 +139,7 @@ public class Superstream {
                                         reqData.put("client_id", clientID);
                                         ObjectMapper mapper = new ObjectMapper();
                                         byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-                                        brokerConnection.request(Consts.clientReconnectionUpdateSubject, reqBytes,
-                                                Duration.ofSeconds(30));
+                                        brokerConnection.publish(Consts.clientReconnectionUpdateSubject, reqBytes);
                                     }
                                 } catch (Exception e) {
                                     System.out.println(
@@ -191,7 +194,7 @@ public class Superstream {
             reqData.put("connection_id", kafkaConnectionID);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-            Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(30));
+            Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(5));
             if (reply != null) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> replyData = mapper.readValue(reply.getData(), Map.class);
@@ -242,25 +245,59 @@ public class Superstream {
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
+        consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
 
         String connectionId = null;
         KafkaConsumer<String, String> consumer = null;
         try {
             consumer = new KafkaConsumer<>(consumerProps);
-            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(500));
+            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
             if (partitions == null || partitions.isEmpty()) {
+                if (consumer != null) {
+                    consumer.close();
+                }
                 return "0";
             }
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
             consumer.assign(Collections.singletonList(topicPartition));
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
             for (ConsumerRecord<String, String> record : records) {
                 connectionId = record.value();
                 break;
             }
         } catch (Exception e) {
-            handleError(String.format("consumeConnectionID: %s", e.getMessage()));
-            return "0";
+            if (e.getMessage().toLowerCase().contains("timeout")) {
+                // retry in case of timeout
+                try {
+                    Thread.sleep(10000);
+                    if (consumer == null) {
+                        consumer = new KafkaConsumer<>(consumerProps);
+                    }
+                    List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
+                    if (partitions == null || partitions.isEmpty()) {
+                        if (consumer != null) {
+                            consumer.close();
+                        }
+                        return "0";
+                    }
+                    TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
+                    consumer.assign(Collections.singletonList(topicPartition));
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
+                    for (ConsumerRecord<String, String> record : records) {
+                        connectionId = record.value();
+                        break;
+                    }
+                } catch (Exception e2) {}
+            }
+            if (connectionId == null || connectionId == "0"){
+                handleError(String.format("consumeConnectionID: %s", e.getMessage()));
+                if (consumer != null) {
+                    consumer.close();
+                }
+                return "0";
+            } else {
+                return connectionId;
+            }
         } finally {
             if (consumer != null) {
                 consumer.close();
@@ -330,7 +367,7 @@ public class Superstream {
             reqData.put("type", type);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-            brokerConnection.request(Consts.clientTypeUpdateSubject, reqBytes, Duration.ofSeconds(30));
+            brokerConnection.publish(Consts.clientTypeUpdateSubject, reqBytes);
         } catch (Exception e) {
             handleError(String.format("sendClientTypeUpdateReq: %s", e.getMessage()));
         }
@@ -347,8 +384,8 @@ public class Superstream {
     }
 
     public void reportClientsUpdate() {
-        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-        executorService.scheduleAtFixedRate(() -> {
+        ScheduledExecutorService singleExecutorService = Executors.newSingleThreadScheduledExecutor();
+        singleExecutorService.scheduleAtFixedRate(() -> {
             try {
                 byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
                 Map<String, Object> topicPartitionConfig = new HashMap<>();
@@ -522,7 +559,7 @@ public class Superstream {
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             Message msg = brokerConnection.request(String.format(Consts.superstreamGetSchemaSubject, clientID),
-                    reqBytes, Duration.ofSeconds(30));
+                    reqBytes, Duration.ofSeconds(5));
             if (msg == null) {
                 throw new Exception("Could not get descriptor");
             }
@@ -666,14 +703,10 @@ public class Superstream {
         if (isInnerConsumer != null && isInnerConsumer.equals("true")) {
             return configs;
         }
-        String interceptors = (String) configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+        String interceptorToAdd = "";
         switch (type) {
             case "producer":
-                if (interceptors != null && !interceptors.isEmpty()) {
-                    interceptors += "," + SuperstreamProducerInterceptor.class.getName();
-                } else {
-                    interceptors = SuperstreamProducerInterceptor.class.getName();
-                }
+                interceptorToAdd = SuperstreamProducerInterceptor.class.getName();
                 if (configs.containsKey(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG)) {
                     if (!configs.containsKey(Consts.originalSerializer)) {
                         configs.put(Consts.originalSerializer,
@@ -684,11 +717,7 @@ public class Superstream {
                 }
                 break;
             case "consumer":
-                if (interceptors != null && !interceptors.isEmpty()) {
-                    interceptors += "," + SuperstreamConsumerInterceptor.class.getName();
-                } else {
-                    interceptors = SuperstreamConsumerInterceptor.class.getName();
-                }
+                interceptorToAdd = SuperstreamConsumerInterceptor.class.getName();
                 if (configs.containsKey(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG)) {
                     if (!configs.containsKey(Consts.originalDeserializer)) {
                         configs.put(Consts.originalDeserializer,
@@ -699,11 +728,29 @@ public class Superstream {
                 }
                 break;
         }
-        if (interceptors != null) {
-            configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
-        }
 
         try {
+            List<String> interceptors = null;
+            Object existingInterceptors = configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+            if (interceptorToAdd != "") {
+                if (existingInterceptors != null) {
+                    if (existingInterceptors instanceof List) {
+                        interceptors = new ArrayList<>((List<String>) existingInterceptors);
+                    } else if (existingInterceptors instanceof String) {
+                        interceptors = new ArrayList<>();
+                        interceptors.add((String) existingInterceptors);
+                    } else {
+                        interceptors = new ArrayList<>();
+                    }
+                } else {
+                    interceptors = new ArrayList<>();
+                }
+            }
+            if (interceptorToAdd != "") {
+                interceptors.add(interceptorToAdd);
+                configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+            }
+            
             Map<String, String> envVars = System.getenv();
             String superstreamHost = envVars.get("SUPERSTREAM_HOST");
             if (superstreamHost == null) {

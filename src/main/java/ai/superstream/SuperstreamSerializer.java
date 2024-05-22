@@ -20,7 +20,6 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
         try {
-            System.out.println("Running Superstream Kafka Producer");
             Object originalSerializerObj = configs.get(Consts.originalSerializer);
             if (originalSerializerObj == null) {
                 throw new Exception("original serializer is required");
@@ -41,7 +40,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             this.originalSerializer.configure(configs, isKey);
             Superstream superstreamConn = (Superstream) configs.get(Consts.superstreamConnectionKey);
             if (superstreamConn == null) {
-                System.out.println("Failed to connect to Superstream - Running Kafka Producer");
+                System.out.println("Failed to connect to Superstream");
             } else {
                 this.superstreamConnection = superstreamConn;
             }
@@ -73,7 +72,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
         if (serializedData == null) {
             return null;
         }
-        if (superstreamConnection != null) {
+        if (superstreamConnection != null && superstreamConnection.superstreamReady) {
             if (superstreamConnection.reductionEnabled == true) {
                 if (superstreamConnection.descriptor != null) {
                     try {
