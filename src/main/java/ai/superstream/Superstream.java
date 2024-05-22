@@ -727,22 +727,29 @@ public class Superstream {
                 }
                 break;
         }
-        List<Object> interceptors = null;
-        Object interceptorsValue =configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
-        if (interceptorToAdd != "") {
-            if (interceptorsValue != null) {
-                interceptors = new ArrayList<>(Arrays.asList(interceptorsValue));
-                interceptors.add(interceptorToAdd);
-            } else {
-                interceptors = Arrays.asList(interceptorToAdd);
-            }
-        }
-        
-        if (interceptors != null) {
-            configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
-        }
 
         try {
+            List<String> interceptors = null;
+            Object existingInterceptors = configs.get(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG);
+            if (interceptorToAdd != "") {
+                if (existingInterceptors != null) {
+                    if (existingInterceptors instanceof List) {
+                        interceptors = new ArrayList<>((List<String>) existingInterceptors);
+                    } else if (existingInterceptors instanceof String) {
+                        interceptors = new ArrayList<>();
+                        interceptors.add((String) existingInterceptors);
+                    } else {
+                        interceptors = new ArrayList<>();
+                    }
+                } else {
+                    interceptors = new ArrayList<>();
+                }
+            }
+            if (interceptorToAdd != "") {
+                interceptors.add(interceptorToAdd);
+                configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
+            }
+            
             Map<String, String> envVars = System.getenv();
             String superstreamHost = envVars.get("SUPERSTREAM_HOST");
             if (superstreamHost == null) {
