@@ -17,6 +17,7 @@ public class Consts {
     public static final String superstreamGetSchemaSubject = "internal.schema.getSchema.%d";
     public static final Integer superstreamDefaultLearningFactor = 20;
     public static final String superstreamLearningFactorKey = "superstream.learning.factor";
+    public static final String superstreamTagsKey = "superstream.tags";
     public static final String superstreamHostKey = "superstream.host";
     public static final String superstreamTokenKey = "superstream.token";
     public static final String superstreamReductionEnabledKey = "superstream.reduction.enabled";
