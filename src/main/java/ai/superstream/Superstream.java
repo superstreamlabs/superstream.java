@@ -36,7 +36,6 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.util.JsonFormat;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.google.protobuf.DescriptorProtos;
@@ -80,15 +79,22 @@ public class Superstream {
     public ExecutorService executorService = Executors.newFixedThreadPool(3);
     private Integer kafkaConnectionID = 0;
     public Boolean superstreamReady = false;
+    private String tags = "";
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
-            Boolean enableReduction, String type) {
+            Boolean enableReduction, String type, String tags) {
         this.learningFactor = learningFactor;
         this.token = token;
         this.host = host;
         this.configs = configs;
         this.reductionEnabled = enableReduction;
         this.type = type;
+        this.tags = tags;
+    }
+
+    public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
+            Boolean enableReduction, String type) {
+        this(token, host, learningFactor, configs, enableReduction, type, "");
     }
 
     public void init() {
@@ -192,6 +198,7 @@ public class Superstream {
             reqData.put("config", normalizeClientConfig(configs));
             reqData.put("reduction_enabled", reductionEnabled);
             reqData.put("connection_id", kafkaConnectionID);
+            reqData.put("tags", tags);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
             Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(5));
@@ -411,7 +418,7 @@ public class Superstream {
             } catch (Exception e) {
                 handleError("reportClientsUpdate: " + e.getMessage());
             }
-        }, 0, 30, TimeUnit.SECONDS);
+        }, 0, 2, TimeUnit.MINUTES);
     }
 
     public static Map<String, Integer[]> convertMap(Map<String, Set<Integer>> topicPartitions) {
@@ -774,8 +781,12 @@ public class Superstream {
                 reductionEnabled = Boolean.parseBoolean(reductionEnabledString);
             }
             configs.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
+            String tags = envVars.get("SUPERSTREAM_TAGS");
+            if (tags == null) {
+                tags = "";
+            }
             Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs,
-                    reductionEnabled, type);
+                    reductionEnabled, type, tags);
             superstreamConnection.init();
             configs.put(Consts.superstreamConnectionKey, superstreamConnection);
         } catch (Exception e) {
@@ -863,6 +874,10 @@ public class Superstream {
                 reductionEnabled = Boolean.parseBoolean(reductionEnabledString);
             }
             properties.put(Consts.superstreamReductionEnabledKey, reductionEnabled);
+            String tags = envVars.get("SUPERSTREAM_TAGS");
+            if (tags != null) {
+                properties.put(Consts.superstreamTagsKey, tags);
+            }
             Map<String, Object> configs = propertiesToMap(properties);
             Superstream superstreamConnection = new Superstream(token, superstreamHost, learningFactor, configs,
                     reductionEnabled, type);
