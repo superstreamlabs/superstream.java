@@ -1,7 +1,7 @@
 package ai.superstream;
 
 public class Consts {
-    public static final String sdkVersion = "1.0.8";
+    public static final String sdkVersion = "1.0.9";
     public static final String clientReconnectionUpdateSubject = "internal.clientReconnectionUpdate";
     public static final String clientTypeUpdateSubject = "internal.clientTypeUpdate";
     public static final String clientRegisterSubject = "internal.registerClient";
