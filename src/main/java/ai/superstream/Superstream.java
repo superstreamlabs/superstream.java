@@ -625,13 +625,13 @@ public class Superstream {
 
     public void handleError(String msg) {
         if (brokerConnection != null) {
+            String tags = envVars.get("SUPERSTREAM_TAGS");
             if (clientID == 0) {
-                String message = String.format("[sdk: java][version: %s][connectionID: %s] %s", Consts.sdkVersion,
-                        this.natsConnectionID, msg);
+                String message = String.format("[sdk: java][version: %s][tags: %s] %s", Consts.sdkVersion, tags, msg);
                 brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
             } else {
-                String message = String.format("[account name: %s][clientID: %d][sdk: java][version: %s] %s",
-                        accountName, clientID, Consts.sdkVersion, msg);
+                String message = String.format("[clientID: %d][sdk: java][version: %s][tags: %s] %s",
+                        clientID, Consts.sdkVersion, tags, msg);
                 brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
             }
         }
