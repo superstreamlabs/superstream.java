@@ -9,12 +9,12 @@ public class Consts {
     public static final String originalDeserializer = "original.deserializer";
     public static final String superstreamDefaultToken = "no-auth";
     public static final String superstreamErrorSubject = "internal.clientErrors";
-    public static final String superstreamUpdatesSubject = "internal.updates.%d";
-    public static final String superstreamClientsUpdateSubject = "internal_tasks.clientsUpdate.%s.%d";
-    public static final String superstreamLearningSubject = "internal.schema.learnSchema.%d";
-    public static final String superstreamRegisterSchemaSubject = "internal_tasks.schema.registerSchema.%d";
+    public static final String superstreamUpdatesSubject = "internal.updates.%s";
+    public static final String superstreamClientsUpdateSubject = "internal_tasks.clientsUpdate.%s.%s";
+    public static final String superstreamLearningSubject = "internal.schema.learnSchema.%s";
+    public static final String superstreamRegisterSchemaSubject = "internal_tasks.schema.registerSchema.%s";
     public static final String superstreamInternalUsername = "superstream_internal";
-    public static final String superstreamGetSchemaSubject = "internal.schema.getSchema.%d";
+    public static final String superstreamGetSchemaSubject = "internal.schema.getSchema.%s";
     public static final Integer superstreamDefaultLearningFactor = 20;
     public static final String superstreamLearningFactorKey = "superstream.learning.factor";
     public static final String superstreamTagsKey = "superstream.tags";
@@ -24,4 +24,5 @@ public class Consts {
     public static final String superstreamConnectionKey = "superstream.connection";
     public static final String superstreamInnerConsumerKey = "superstream.inner.consumer";
     public static final String superstreamMetadataTopic = "superstream.metadata";
+    public static final String clientStartSubject = "internal.startClient.%s";
 }
