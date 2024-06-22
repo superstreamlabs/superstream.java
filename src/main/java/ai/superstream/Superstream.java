@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -59,7 +60,7 @@ public class Superstream {
     public byte[] descriptorAsBytes;
     public Descriptors.Descriptor descriptor;
     public String natsConnectionID;
-    public int clientID;
+    public String clientHash;
     public String accountName;
     public int learningFactor = 20;
     public int learningFactorCounter = 0;
@@ -80,6 +81,7 @@ public class Superstream {
     private Integer kafkaConnectionID = 0;
     public Boolean superstreamReady = false;
     private String tags = "";
+    public Boolean canStart = false;
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
             Boolean enableReduction, String type, String tags) {
@@ -103,6 +105,10 @@ public class Superstream {
                     initializeNatsConnection(token, host);
                     if (this.brokerConnection != null) {
                         registerClient(configs);
+                        waitForStart();
+                        if (!canStart) {
+                            throw new Exception("Could not start superstream");
+                        }
                         subscribeToUpdates();
                         reportClientsUpdate();
                         sendClientTypeUpdateReq();
@@ -142,7 +148,7 @@ public class Superstream {
                                         natsConnectionID = generateNatsConnectionID();
                                         Map<String, Object> reqData = new HashMap<>();
                                         reqData.put("new_nats_connection_id", natsConnectionID);
-                                        reqData.put("client_id", clientID);
+                                        reqData.put("client_hash", clientHash);
                                         ObjectMapper mapper = new ObjectMapper();
                                         byte[] reqBytes = mapper.writeValueAsBytes(reqData);
                                         brokerConnection.publish(Consts.clientReconnectionUpdateSubject, reqBytes);
@@ -201,27 +207,21 @@ public class Superstream {
             reqData.put("tags", tags);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-            Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofSeconds(5));
+            Message reply = brokerConnection.request(Consts.clientRegisterSubject, reqBytes, Duration.ofMinutes(5));
             if (reply != null) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> replyData = mapper.readValue(reply.getData(), Map.class);
-                Object clientIDObject = replyData.get("client_id");
-                if (clientIDObject instanceof Integer) {
-                    clientID = (Integer) clientIDObject;
-                } else if (clientIDObject instanceof String) {
-                    try {
-                        clientID = Integer.parseInt((String) clientIDObject);
-                    } catch (NumberFormatException e) {
-                        System.err.println("superstream: client_id is not a valid integer: " + clientIDObject);
-                    }
+                Object clientHashObject = replyData.get("client_hash");
+                if (clientHashObject != null) {
+                    clientHash = clientHashObject.toString();
                 } else {
-                    System.err.println("superstream: client_id is not a valid integer: " + clientIDObject);
+                    System.out.println("superstream: client_hash is not a valid string: " + clientHashObject);
                 }
                 Object accountNameObject = replyData.get("account_name");
                 if (accountNameObject != null) {
                     accountName = accountNameObject.toString();
                 } else {
-                    System.err.println("superstream: account_name is not a valid string: " + accountNameObject);
+                    System.out.println("superstream: account_name is not a valid string: " + accountNameObject);
                 }
                 Object learningFactorObject = replyData.get("learning_factor");
                 if (learningFactorObject instanceof Integer) {
@@ -230,11 +230,11 @@ public class Superstream {
                     try {
                         learningFactor = Integer.parseInt((String) learningFactorObject);
                     } catch (NumberFormatException e) {
-                        System.err.println(
+                        System.out.println(
                                 "superstream: learning_factor is not a valid integer: " + learningFactorObject);
                     }
                 } else {
-                    System.err.println("superstream: learning_factor is not a valid integer: " + learningFactorObject);
+                    System.out.println("superstream: learning_factor is not a valid integer: " + learningFactorObject);
                 }
             } else {
                 String errMsg = "superstream: registering client: No reply received within the timeout period.";
@@ -243,6 +243,42 @@ public class Superstream {
             }
         } catch (Exception e) {
             System.out.println(String.format("superstream: %s", e.getMessage()));
+        }
+    }
+
+    private void waitForStart() {
+        CountDownLatch latch = new CountDownLatch(1);
+        Dispatcher dispatcher = brokerConnection.createDispatcher((msg) -> {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, Object> messageData = mapper.readValue(msg.getData(), Map.class);
+                if (messageData.containsKey("start")) {
+                    boolean start = (Boolean) messageData.get("start");
+                    if (start) {
+                        canStart = true;
+                        latch.countDown(); // continue and stop the wait
+                    } else {
+                        String err = (String) messageData.get("error");
+                        System.out.println("superstream: Could not start superstream: " + err);
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        dispatcher.subscribe(String.format(Consts.clientStartSubject, clientHash)); // replace with your specific subject
+
+        try {
+            if (!latch.await(10, TimeUnit.MINUTES)) {
+                System.out.println("superstream: Could not connect to superstream for 10 minutes.");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.out.println("superstream: Could not start superstream: " + e.getMessage());
+        } finally {
+            dispatcher.unsubscribe(String.format(Consts.clientStartSubject, clientHash));
         }
     }
 
@@ -370,7 +406,7 @@ public class Superstream {
         }
         try {
             Map<String, Object> reqData = new HashMap<>();
-            reqData.put("client_id", clientID);
+            reqData.put("client_hash", clientHash);
             reqData.put("type", type);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
@@ -382,7 +418,7 @@ public class Superstream {
 
     public void subscribeToUpdates() {
         try {
-            String subject = String.format(Consts.superstreamUpdatesSubject, clientID);
+            String subject = String.format(Consts.superstreamUpdatesSubject, clientHash);
             Dispatcher dispatcher = brokerConnection.createDispatcher(this.updatesHandler());
             updatesSubscription = dispatcher.subscribe(subject, this.updatesHandler());
         } catch (Exception e) {
@@ -411,9 +447,9 @@ public class Superstream {
                     }
                 }
                 byte[] byteConfig = objectMapper.writeValueAsBytes(topicPartitionConfig);
-                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "counters", clientID),
+                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "counters", clientHash),
                         byteCounters);
-                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientID),
+                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientHash),
                         byteConfig);
             } catch (Exception e) {
                 handleError("reportClientsUpdate: " + e.getMessage());
@@ -432,7 +468,7 @@ public class Superstream {
 
     public void sendLearningMessage(byte[] msg) {
         try {
-            brokerConnection.publish(String.format(Consts.superstreamLearningSubject, clientID), msg);
+            brokerConnection.publish(String.format(Consts.superstreamLearningSubject, clientHash), msg);
         } catch (Exception e) {
             handleError("sendLearningMessage: " + e.getMessage());
         }
@@ -440,7 +476,7 @@ public class Superstream {
 
     public void sendRegisterSchemaReq() {
         try {
-            brokerConnection.publish(String.format(Consts.superstreamRegisterSchemaSubject, clientID), new byte[0]);
+            brokerConnection.publish(String.format(Consts.superstreamRegisterSchemaSubject, clientHash), new byte[0]);
             learningRequestSent = true;
         } catch (Exception e) {
             handleError("sendLearningMessage: " + e.getMessage());
@@ -565,7 +601,7 @@ public class Superstream {
             reqData.put("schema_id", schemaID);
             ObjectMapper mapper = new ObjectMapper();
             byte[] reqBytes = mapper.writeValueAsBytes(reqData);
-            Message msg = brokerConnection.request(String.format(Consts.superstreamGetSchemaSubject, clientID),
+            Message msg = brokerConnection.request(String.format(Consts.superstreamGetSchemaSubject, clientHash),
                     reqBytes, Duration.ofSeconds(5));
             if (msg == null) {
                 throw new Exception("Could not get descriptor");
@@ -630,12 +666,12 @@ public class Superstream {
             if (tags == null) {
                 tags = "";
             }
-            if (clientID == 0) {
+            if (clientHash == "") {
                 String message = String.format("[sdk: java][version: %s][tags: %s] %s", Consts.sdkVersion, tags, msg);
                 brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
             } else {
-                String message = String.format("[clientID: %d][sdk: java][version: %s][tags: %s] %s",
-                        clientID, Consts.sdkVersion, tags, msg);
+                String message = String.format("[clientHash: %s][sdk: java][version: %s][tags: %s] %s",
+                clientHash, Consts.sdkVersion, tags, msg);
                 brokerConnection.publish(Consts.superstreamErrorSubject, message.getBytes(StandardCharsets.UTF_8));
             }
         }
