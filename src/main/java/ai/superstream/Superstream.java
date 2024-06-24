@@ -286,7 +286,7 @@ public class Superstream {
         Properties consumerProps = copyAuthConfig();
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
         consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
 
