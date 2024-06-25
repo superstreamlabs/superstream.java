@@ -67,7 +67,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
         if (originalSerializer == null) {
             return null;
         }
-        byte[] serializedData = this.originalSerializer.serialize(topic, data);
+        byte[] serializedData = this.originalSerializer.serialize(topic, headers, data);
         byte[] serializedResult;
         if (serializedData == null) {
             return null;

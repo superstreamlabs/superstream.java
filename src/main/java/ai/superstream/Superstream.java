@@ -136,11 +136,13 @@ public class Superstream {
                     .server(host)
                     .userInfo(Consts.superstreamInternalUsername, token)
                     .maxReconnects(-1)
+                    .connectionTimeout(Duration.ofSeconds(1))
                     .reconnectWait(Duration.ofSeconds(1))
                     .connectionListener(new ConnectionListener() {
                         @Override
                         public void connectionEvent(Connection conn, Events type) {
                             if (type == Events.DISCONNECTED) {
+                                superstreamReady = false;
                                 System.out.println("superstream: Disconnected");
                             } else if (type == Events.RECONNECTED) {
                                 try {
@@ -152,10 +154,11 @@ public class Superstream {
                                         ObjectMapper mapper = new ObjectMapper();
                                         byte[] reqBytes = mapper.writeValueAsBytes(reqData);
                                         brokerConnection.publish(Consts.clientReconnectionUpdateSubject, reqBytes);
+                                        superstreamReady = true;
                                     }
                                 } catch (Exception e) {
                                     System.out.println(
-                                            "superstream: Failed to send reconnection update: " + e.getMessage());
+                                            "superstream: Failed to reconnect: " + e.getMessage());
                                 }
                                 System.out.println("superstream: Reconnected to superstream");
                             }
