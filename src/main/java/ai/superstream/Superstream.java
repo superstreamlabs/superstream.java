@@ -136,7 +136,7 @@ public class Superstream {
                     .server(host)
                     .userInfo(Consts.superstreamInternalUsername, token)
                     .maxReconnects(-1)
-                    .connectionTimeout(Duration.ofSeconds(1))
+                    .connectionTimeout(Duration.ofSeconds(10))
                     .reconnectWait(Duration.ofSeconds(1))
                     .connectionListener(new ConnectionListener() {
                         @Override
