@@ -110,9 +110,9 @@ public class Superstream {
                             throw new Exception("Could not start superstream");
                         }
                         subscribeToUpdates();
+                        superstreamReady = true;
                         reportClientsUpdate();
                         sendClientTypeUpdateReq();
-                        superstreamReady = true;
                     }
                 } catch (Exception e) {
                     handleError(e.getMessage());
@@ -157,9 +157,8 @@ public class Superstream {
                                         byte[] reqBytes = mapper.writeValueAsBytes(reqData);
                                         brokerConnection.publish(Consts.clientReconnectionUpdateSubject, reqBytes);
                                         subscribeToUpdates();
-                                        reportClientsUpdate();
-                                        sendClientTypeUpdateReq();
                                         superstreamReady = true;
+                                        reportClientsUpdate();
                                     }
                                 } catch (Exception e) {
                                     System.out.println(
