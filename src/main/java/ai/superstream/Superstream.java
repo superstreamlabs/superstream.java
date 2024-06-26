@@ -142,10 +142,12 @@ public class Superstream {
                         @Override
                         public void connectionEvent(Connection conn, Events type) {
                             if (type == Events.DISCONNECTED) {
+                                brokerConnection = null;
                                 superstreamReady = false;
                                 System.out.println("superstream: Disconnected");
                             } else if (type == Events.RECONNECTED) {
                                 try {
+                                    brokerConnection = conn;
                                     if (brokerConnection != null) {
                                         natsConnectionID = generateNatsConnectionID();
                                         Map<String, Object> reqData = new HashMap<>();
@@ -154,6 +156,9 @@ public class Superstream {
                                         ObjectMapper mapper = new ObjectMapper();
                                         byte[] reqBytes = mapper.writeValueAsBytes(reqData);
                                         brokerConnection.publish(Consts.clientReconnectionUpdateSubject, reqBytes);
+                                        subscribeToUpdates();
+                                        reportClientsUpdate();
+                                        sendClientTypeUpdateReq();
                                         superstreamReady = true;
                                     }
                                 } catch (Exception e) {
@@ -433,27 +438,29 @@ public class Superstream {
         ScheduledExecutorService singleExecutorService = Executors.newSingleThreadScheduledExecutor();
         singleExecutorService.scheduleAtFixedRate(() -> {
             try {
-                byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
-                Map<String, Object> topicPartitionConfig = new HashMap<>();
-                if (!topicPartitions.isEmpty()) {
-                    Map<String, Integer[]> topicPartitionsToSend = convertMap(topicPartitions);
-                    switch (this.type) {
-                        case "producer":
-                            topicPartitionConfig.put("producer_topics_partitions", topicPartitionsToSend);
-                            topicPartitionConfig.put("consumer_group_topics_partitions",
-                                    new HashMap<String, Integer[]>());
-                            break;
-                        case "consumer":
-                            topicPartitionConfig.put("producer_topics_partitions", new HashMap<String, Integer[]>());
-                            topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
-                            break;
+                if (brokerConnection != null && superstreamReady){
+                    byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
+                    Map<String, Object> topicPartitionConfig = new HashMap<>();
+                    if (!topicPartitions.isEmpty()) {
+                        Map<String, Integer[]> topicPartitionsToSend = convertMap(topicPartitions);
+                        switch (this.type) {
+                            case "producer":
+                                topicPartitionConfig.put("producer_topics_partitions", topicPartitionsToSend);
+                                topicPartitionConfig.put("consumer_group_topics_partitions",
+                                        new HashMap<String, Integer[]>());
+                                break;
+                            case "consumer":
+                                topicPartitionConfig.put("producer_topics_partitions", new HashMap<String, Integer[]>());
+                                topicPartitionConfig.put("consumer_group_topics_partitions", topicPartitionsToSend);
+                                break;
+                        }
                     }
+                    byte[] byteConfig = objectMapper.writeValueAsBytes(topicPartitionConfig);
+                    brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "counters", clientHash),
+                            byteCounters);
+                    brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientHash),
+                            byteConfig);
                 }
-                byte[] byteConfig = objectMapper.writeValueAsBytes(topicPartitionConfig);
-                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "counters", clientHash),
-                        byteCounters);
-                brokerConnection.publish(String.format(Consts.superstreamClientsUpdateSubject, "config", clientHash),
-                        byteConfig);
             } catch (Exception e) {
                 handleError("reportClientsUpdate: " + e.getMessage());
             }
@@ -663,7 +670,7 @@ public class Superstream {
     }
 
     public void handleError(String msg) {
-        if (brokerConnection != null) {
+        if (brokerConnection != null && superstreamReady) {
             Map<String, String> envVars = System.getenv();
             String tags = envVars.get("SUPERSTREAM_TAGS");
             if (tags == null) {
