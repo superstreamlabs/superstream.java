@@ -669,6 +669,7 @@ public class Superstream {
     }
 
     public void handleError(String msg) {
+
         if (brokerConnection != null && superstreamReady) {
             Map<String, String> envVars = System.getenv();
             String tags = envVars.get("SUPERSTREAM_TAGS");
