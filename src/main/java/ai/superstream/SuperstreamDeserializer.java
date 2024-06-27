@@ -68,35 +68,37 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
             return null;
         }
         String schemaId = null;
-        byte[] dataToDesrialize = data;
-        if (dataToDesrialize == null) {
-            this.originalDeserializer.deserialize(topic, dataToDesrialize);
-        }
-
-        if (!this.superstreamConnection.superstreamReady) {
-            int totalWaitTime = 60;
-            int checkInterval = 5;  
-            try {
-                for (int i = 0; i < totalWaitTime; i += checkInterval) {
-                    if (this.superstreamConnection.superstreamReady) {
-                        break;
-                    }
-                    Thread.sleep(checkInterval * 1000);
-                }
-            } catch (Exception e) {}
-        }
-        if (!this.superstreamConnection.superstreamReady) {
-            System.out.println("superstream: cannot connect with superstream");
-            return null;
-        }
-        if (this.superstreamConnection != null) {
-            this.superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);
-        }
         Header header = headers.lastHeader("superstream_schema");
         if (header != null) {
             schemaId = new String(header.value(), StandardCharsets.UTF_8);
         }
+        byte[] dataToDesrialize = data;
+        if (dataToDesrialize == null) {
+            this.originalDeserializer.deserialize(topic, headers, dataToDesrialize);
+        }
+
+        
+        if (this.superstreamConnection != null) {
+            this.superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);
+        }
+        
         if (schemaId != null) {
+            if (!this.superstreamConnection.superstreamReady) {
+                int totalWaitTime = 60;
+                int checkInterval = 5;  
+                try {
+                    for (int i = 0; i < totalWaitTime; i += checkInterval) {
+                        if (this.superstreamConnection.superstreamReady) {
+                            break;
+                        }
+                        Thread.sleep(checkInterval * 1000);
+                    }
+                } catch (Exception e) {}
+            }
+            if (!this.superstreamConnection.superstreamReady) {
+                System.out.println("superstream: cannot connect with superstream and consume message that was modified by superstream");
+                return null;
+            }
             Descriptors.Descriptor desc = superstreamConnection.SchemaIDMap.get(schemaId);
             if (desc == null) {
                 superstreamConnection.sendGetSchemaRequest(schemaId);
@@ -123,7 +125,7 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
                 superstreamConnection.clientCounters.incrementTotalMessagesFailedConsume();
             }
         }
-        T deserializedData = this.originalDeserializer.deserialize(topic, dataToDesrialize);
+        T deserializedData = this.originalDeserializer.deserialize(topic, headers, dataToDesrialize);
         return deserializedData;
     }
 
