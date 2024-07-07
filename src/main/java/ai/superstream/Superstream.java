@@ -297,68 +297,78 @@ public class Superstream {
         consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
         consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
 
-//        String connectionId = null;
-//        KafkaConsumer<String, String> consumer = null;
-//        try {
-//            consumer = new KafkaConsumer<>(consumerProps);
-//            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
-//            if (partitions == null || partitions.isEmpty()) {
-//                if (consumer != null) {
-//                    consumer.close();
-//                }
-//                return "0";
-//            }
-//            TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
-//            consumer.assign(Collections.singletonList(topicPartition));
-//            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
-//            for (ConsumerRecord<String, String> record : records) {
-//                connectionId = record.value();
-//                break;
-//            }
-//        } catch (Exception e) {
-//            if (e.getMessage().toLowerCase().contains("timeout")) {
-//                // retry in case of timeout
-//                try {
-//                    Thread.sleep(10000);
-//                    if (consumer == null) {
-//                        consumer = new KafkaConsumer<>(consumerProps);
-//                    }
-//                    List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
-//                    if (partitions == null || partitions.isEmpty()) {
-//                        if (consumer != null) {
-//                            consumer.close();
-//                        }
-//                        return "0";
-//                    }
-//                    TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
-//                    consumer.assign(Collections.singletonList(topicPartition));
-//                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
-//                    for (ConsumerRecord<String, String> record : records) {
-//                        connectionId = record.value();
-//                        break;
-//                    }
-//                } catch (Exception e2) {}
-//            }
-//            if (connectionId == null || connectionId == "0"){
-//                handleError(String.format("consumeConnectionID: %s", e.getMessage()));
-//                if (consumer != null) {
-//                    consumer.close();
-//                }
-//                return "0";
-//            } else {
-//                return connectionId;
-//            }
-//        } finally {
-//            if (consumer != null) {
-//                consumer.close();
-//            }
-//        }
-//        if (connectionId == null) {
-//            connectionId = "0";
-//        }
-//        return connectionId;
-        String connectionId = getLastMetadataFromTopic(Consts.superstreamMetadataTopic, consumerProps);
-        return connectionId != null ? connectionId : "0";
+        String connectionId = null;
+        KafkaConsumer<String, String> consumer = null;
+        try {
+            consumer = new KafkaConsumer<>(consumerProps);
+            List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
+            if (partitions == null || partitions.isEmpty()) {
+                if (consumer != null) {
+                    consumer.close();
+                }
+                return "0";
+            }
+            List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 1));
+            consumer.assign(topicPartitions);
+
+            consumer.seekToEnd(topicPartitions);
+
+            Map<TopicPartition, Long> endOffsets = new HashMap<>();
+            for (TopicPartition topicPartition : topicPartitions) {
+                endOffsets.put(topicPartition, consumer.position(topicPartition));
+            }
+
+            for (Map.Entry<TopicPartition, Long> entry : endOffsets.entrySet()) {
+                consumer.seek(entry.getKey(), Math.max(0, entry.getValue() - 1));
+            }
+
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
+            for (ConsumerRecord<String, String> record : records) {
+                return record.value();
+            }
+        } catch (Exception e) {
+            if (e.getMessage().toLowerCase().contains("timeout")) {
+                // retry in case of timeout
+                try {
+                    Thread.sleep(10000);
+                    if (consumer == null) {
+                        consumer = new KafkaConsumer<>(consumerProps);
+                    }
+                    List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
+                    if (partitions == null || partitions.isEmpty()) {
+                        if (consumer != null) {
+                            consumer.close();
+                        }
+                        return "0";
+                    }
+                    TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
+                    consumer.assign(Collections.singletonList(topicPartition));
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
+                    for (ConsumerRecord<String, String> record : records) {
+                        connectionId = record.value();
+                        break;
+                    }
+                } catch (Exception e2) {}
+            }
+            if (connectionId == null || connectionId == "0"){
+                handleError(String.format("consumeConnectionID: %s", e.getMessage()));
+                if (consumer != null) {
+                    consumer.close();
+                }
+                return "0";
+            } else {
+                return connectionId;
+            }
+        } finally {
+            if (consumer != null) {
+                consumer.close();
+            }
+        }
+        if (connectionId == null) {
+            connectionId = "0";
+        }
+        return connectionId;
+
     }
 
     private Properties copyAuthConfig() {
