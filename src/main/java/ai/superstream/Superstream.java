@@ -965,45 +965,4 @@ public class Superstream {
             partitions.add(partition);
         }
     }
-
-    public static String getLastMetadataFromTopic(String topic, Properties consumerProps) {
-        KafkaConsumer<String, String> consumer = null;
-        try {
-            consumer = new KafkaConsumer<>(consumerProps);
-            List<PartitionInfo> partitions = consumer.partitionsFor(topic, Duration.ofMillis(10000));
-            if (partitions == null || partitions.isEmpty()) {
-                return "0";
-            }
-
-            List<TopicPartition> topicPartitions = new ArrayList<>();
-            for (PartitionInfo partition : partitions) {
-                topicPartitions.add(new TopicPartition(topic, partition.partition()));
-            }
-            consumer.assign(topicPartitions);
-
-            consumer.seekToEnd(topicPartitions);
-
-            Map<TopicPartition, Long> endOffsets = new HashMap<>();
-            for (TopicPartition topicPartition : topicPartitions) {
-                endOffsets.put(topicPartition, consumer.position(topicPartition));
-            }
-
-            // Seek to the last message position
-            for (Map.Entry<TopicPartition, Long> entry : endOffsets.entrySet()) {
-                consumer.seek(entry.getKey(), Math.max(0, entry.getValue() - 1));
-            }
-
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
-            for (ConsumerRecord<String, String> record : records) {
-                return record.value();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (consumer != null) {
-                consumer.close();
-            }
-        }
-        return null;
-    }
 }
