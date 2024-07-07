@@ -329,7 +329,6 @@ public class Superstream {
                     if (partitions == null || partitions.isEmpty()) {
                         if (consumer != null) {
                             consumer.close();
-                            return "0";
                         }
                         return "0";
                     }
