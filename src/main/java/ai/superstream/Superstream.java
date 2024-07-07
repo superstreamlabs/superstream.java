@@ -293,10 +293,9 @@ public class Superstream {
         Properties consumerProps = copyAuthConfig();
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
         consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
-
         String connectionId = null;
         KafkaConsumer<String, String> consumer = null;
         try {
@@ -308,15 +307,16 @@ public class Superstream {
                 }
                 return "0";
             }
-            List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 0));
-            consumer.assign(topicPartitions);
-            consumer.seekToEnd(topicPartitions);
-            long lastOffset = consumer.position(topicPartitions.get(0)) - 1;
-            consumer.seek(topicPartitions.get(0), lastOffset);
-
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
-            for (ConsumerRecord<String, String> record : records) {
-                return record.value();
+            TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
+            consumer.assign(Collections.singletonList(topicPartition));
+            consumer.seekToEnd(Collections.singletonList(topicPartition));
+            long endOffset = consumer.position(topicPartition);
+            if (endOffset > 0) {
+                consumer.seek(topicPartition, endOffset - 1);
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
+                if (!records.isEmpty()) {
+                    connectionId = records.iterator().next().value();
+                }
             }
         } catch (Exception e) {
             if (e.getMessage().toLowerCase().contains("timeout")) {
@@ -335,16 +335,16 @@ public class Superstream {
                     TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
                     consumer.assign(Collections.singletonList(topicPartition));
                     consumer.seekToEnd(Collections.singletonList(topicPartition));
-                    long lastOffset = consumer.position(topicPartition) - 1;
-                    consumer.seek(topicPartition, lastOffset);
-
-                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
-                    for (ConsumerRecord<String, String> record : records) {
-                        connectionId = record.value();
-                        break;
+                    long endOffset = consumer.position(topicPartition);
+                    if (endOffset > 0) {
+                        consumer.seek(topicPartition, endOffset - 1);
+                        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
+                        if (!records.isEmpty()) {
+                            connectionId = records.iterator().next().value();
+                        }
                     }
                 } catch (Exception e2) {
-                    handleError(String.format("consumeConnectionID: %s", e2.getMessage()));
+                    handleError(String.format("consumeConnectionID retry: %s", e2.getMessage()));
                 }
             }
             if (connectionId == null || connectionId.equals("0")) {
@@ -353,18 +353,13 @@ public class Superstream {
                     consumer.close();
                 }
                 return "0";
-            } else {
-                return connectionId;
             }
         } finally {
             if (consumer != null) {
                 consumer.close();
             }
         }
-        if (connectionId == null) {
-            connectionId = "0";
-        }
-        return connectionId;
+        return connectionId != null ? connectionId : "0";
     }
 
     private Properties copyAuthConfig() {
