@@ -308,12 +308,23 @@ public class Superstream {
                 }
                 return "0";
             }
-            TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
-            consumer.assign(Collections.singletonList(topicPartition));
+            List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 1));
+            consumer.assign(topicPartitions);
+
+            consumer.seekToEnd(topicPartitions);
+
+            Map<TopicPartition, Long> endOffsets = new HashMap<>();
+            for (TopicPartition topicPartition : topicPartitions) {
+                endOffsets.put(topicPartition, consumer.position(topicPartition));
+            }
+
+            for (Map.Entry<TopicPartition, Long> entry : endOffsets.entrySet()) {
+                consumer.seek(entry.getKey(), Math.max(0, entry.getValue() - 1));
+            }
+
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
             for (ConsumerRecord<String, String> record : records) {
-                connectionId = record.value();
-                break;
+                return record.value();
             }
         } catch (Exception e) {
             if (e.getMessage().toLowerCase().contains("timeout")) {
@@ -357,6 +368,7 @@ public class Superstream {
             connectionId = "0";
         }
         return connectionId;
+
     }
 
     private Properties copyAuthConfig() {
@@ -503,7 +515,7 @@ public class Superstream {
             }
             if (jsonString != null && jsonString.length() > 2 && jsonString.startsWith("\"{") && jsonString.endsWith("}\"")) {
                 jsonString = jsonString.substring(1, jsonString.length() - 1);
-            }    
+            }
             DynamicMessage.Builder newMessageBuilder = DynamicMessage.newBuilder(descriptor);
             JsonFormat.parser().merge(jsonString, newMessageBuilder);
             DynamicMessage message = newMessageBuilder.build();
@@ -516,16 +528,16 @@ public class Superstream {
     public class JsonToProtoResult {
         private final boolean success;
         private final byte[] messageBytes;
-    
+
         public JsonToProtoResult(boolean success, byte[] messageBytes) {
             this.success = success;
             this.messageBytes = messageBytes;
         }
-    
+
         public boolean isSuccess() {
             return success;
         }
-    
+
         public byte[] getMessageBytes() {
             return messageBytes;
         }
@@ -807,7 +819,7 @@ public class Superstream {
                 interceptors.add(interceptorToAdd);
                 configs.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
             }
-            
+
             Map<String, String> envVars = System.getenv();
             String superstreamHost = envVars.get("SUPERSTREAM_HOST");
             if (superstreamHost == null) {
