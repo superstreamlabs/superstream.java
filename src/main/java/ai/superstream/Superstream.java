@@ -308,19 +308,11 @@ public class Superstream {
                 }
                 return "0";
             }
-            List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 1));
+            List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 0));
             consumer.assign(topicPartitions);
-
             consumer.seekToEnd(topicPartitions);
-
-            Map<TopicPartition, Long> endOffsets = new HashMap<>();
-            for (TopicPartition topicPartition : topicPartitions) {
-                endOffsets.put(topicPartition, consumer.position(topicPartition));
-            }
-
-            for (Map.Entry<TopicPartition, Long> entry : endOffsets.entrySet()) {
-                consumer.seek(entry.getKey(), Math.max(0, entry.getValue() - 1));
-            }
+            long lastOffset = consumer.position(topicPartitions.get(0)) - 1;
+            consumer.seek(topicPartitions.get(0), lastOffset);
 
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
             for (ConsumerRecord<String, String> record : records) {
@@ -328,7 +320,6 @@ public class Superstream {
             }
         } catch (Exception e) {
             if (e.getMessage().toLowerCase().contains("timeout")) {
-                // retry in case of timeout
                 try {
                     Thread.sleep(10000);
                     if (consumer == null) {
@@ -341,34 +332,33 @@ public class Superstream {
                         }
                         return "0";
                     }
-                    TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
-                    consumer.assign(Collections.singletonList(topicPartition));
+                    List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 0));
+                    consumer.assign(topicPartitions);
+                    consumer.seekToEnd(topicPartitions);
+                    long lastOffset = consumer.position(topicPartitions.get(0)) - 1;
+                    consumer.seek(topicPartitions.get(0), lastOffset);
+
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
                     for (ConsumerRecord<String, String> record : records) {
                         connectionId = record.value();
                         break;
                     }
-                } catch (Exception e2) {}
-            }
-            if (connectionId == null || connectionId == "0"){
-                handleError(String.format("consumeConnectionID: %s", e.getMessage()));
-                if (consumer != null) {
-                    consumer.close();
+                } catch (Exception e2) {
+                    handleError(String.format("consumeConnectionID: %s", e2.getMessage()));
                 }
-                return "0";
             } else {
-                return connectionId;
+                handleError(String.format("consumeConnectionID: %s", e.getMessage()));
             }
         } finally {
             if (consumer != null) {
                 consumer.close();
             }
         }
+
         if (connectionId == null) {
             connectionId = "0";
         }
         return connectionId;
-
     }
 
     private Properties copyAuthConfig() {
