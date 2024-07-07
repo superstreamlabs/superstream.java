@@ -327,6 +327,10 @@ public class Superstream {
                     }
                     List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
                     if (partitions == null || partitions.isEmpty()) {
+                        if (consumer != null) {
+                            consumer.close();
+                            return "0";
+                        }
                         return "0";
                     }
                     TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
