@@ -332,11 +332,11 @@ public class Superstream {
                         }
                         return "0";
                     }
-                    List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 0));
-                    consumer.assign(topicPartitions);
-                    consumer.seekToEnd(topicPartitions);
-                    long lastOffset = consumer.position(topicPartitions.get(0)) - 1;
-                    consumer.seek(topicPartitions.get(0), lastOffset);
+                    TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
+                    consumer.assign(Collections.singletonList(topicPartition));
+                    consumer.seekToEnd(Collections.singletonList(topicPartition));
+                    long lastOffset = consumer.position(topicPartition) - 1;
+                    consumer.seek(topicPartition, lastOffset);
 
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
                     for (ConsumerRecord<String, String> record : records) {
@@ -346,15 +346,21 @@ public class Superstream {
                 } catch (Exception e2) {
                     handleError(String.format("consumeConnectionID: %s", e2.getMessage()));
                 }
-            } else {
+            }
+            if (connectionId == null || connectionId.equals("0")) {
                 handleError(String.format("consumeConnectionID: %s", e.getMessage()));
+                if (consumer != null) {
+                    consumer.close();
+                }
+                return "0";
+            } else {
+                return connectionId;
             }
         } finally {
             if (consumer != null) {
                 consumer.close();
             }
         }
-
         if (connectionId == null) {
             connectionId = "0";
         }
