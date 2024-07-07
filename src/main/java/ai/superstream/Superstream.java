@@ -293,7 +293,7 @@ public class Superstream {
         Properties consumerProps = copyAuthConfig();
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");  // Changed to "latest"
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         consumerProps.put(Consts.superstreamInnerConsumerKey, "true");
         consumerProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 1);
         String connectionId = null;
@@ -302,6 +302,9 @@ public class Superstream {
             consumer = new KafkaConsumer<>(consumerProps);
             List<PartitionInfo> partitions = consumer.partitionsFor(Consts.superstreamMetadataTopic, Duration.ofMillis(10000));
             if (partitions == null || partitions.isEmpty()) {
+                if (consumer != null) {
+                    consumer.close();
+                }
                 return "0";
             }
             TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
@@ -317,7 +320,6 @@ public class Superstream {
             }
         } catch (Exception e) {
             if (e.getMessage().toLowerCase().contains("timeout")) {
-                // retry in case of timeout
                 try {
                     Thread.sleep(10000);
                     if (consumer == null) {
@@ -344,6 +346,9 @@ public class Superstream {
             }
             if (connectionId == null || connectionId.equals("0")) {
                 handleError(String.format("consumeConnectionID: %s", e.getMessage()));
+                if (consumer != null) {
+                    consumer.close();
+                }
                 return "0";
             }
         } finally {
