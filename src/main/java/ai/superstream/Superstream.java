@@ -308,19 +308,11 @@ public class Superstream {
                 }
                 return "0";
             }
-            List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 1));
+            List<TopicPartition> topicPartitions = Collections.singletonList(new TopicPartition(Consts.superstreamMetadataTopic, 0));
             consumer.assign(topicPartitions);
-
             consumer.seekToEnd(topicPartitions);
-
-            Map<TopicPartition, Long> endOffsets = new HashMap<>();
-            for (TopicPartition topicPartition : topicPartitions) {
-                endOffsets.put(topicPartition, consumer.position(topicPartition));
-            }
-
-            for (Map.Entry<TopicPartition, Long> entry : endOffsets.entrySet()) {
-                consumer.seek(entry.getKey(), Math.max(0, entry.getValue() - 1));
-            }
+            long lastOffset = consumer.position(topicPartitions.get(0)) - 1;
+            consumer.seek(topicPartitions.get(0), lastOffset);
 
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
             for (ConsumerRecord<String, String> record : records) {
@@ -328,7 +320,6 @@ public class Superstream {
             }
         } catch (Exception e) {
             if (e.getMessage().toLowerCase().contains("timeout")) {
-                // retry in case of timeout
                 try {
                     Thread.sleep(10000);
                     if (consumer == null) {
@@ -343,14 +334,20 @@ public class Superstream {
                     }
                     TopicPartition topicPartition = new TopicPartition(Consts.superstreamMetadataTopic, 0);
                     consumer.assign(Collections.singletonList(topicPartition));
+                    consumer.seekToEnd(Collections.singletonList(topicPartition));
+                    long lastOffset = consumer.position(topicPartition) - 1;
+                    consumer.seek(topicPartition, lastOffset);
+
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
                     for (ConsumerRecord<String, String> record : records) {
                         connectionId = record.value();
                         break;
                     }
-                } catch (Exception e2) {}
+                } catch (Exception e2) {
+                    handleError(String.format("consumeConnectionID: %s", e2.getMessage()));
+                }
             }
-            if (connectionId == null || connectionId == "0"){
+            if (connectionId == null || connectionId.equals("0")) {
                 handleError(String.format("consumeConnectionID: %s", e.getMessage()));
                 if (consumer != null) {
                     consumer.close();
@@ -368,7 +365,6 @@ public class Superstream {
             connectionId = "0";
         }
         return connectionId;
-
     }
 
     private Properties copyAuthConfig() {
