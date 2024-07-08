@@ -29,6 +29,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.record.CompressionType;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -82,6 +83,10 @@ public class Superstream {
     public Boolean superstreamReady = false;
     private String tags = "";
     public Boolean canStart = false;
+    private boolean compressionEnabled = false;
+    private CompressionType compressionType = CompressionType.NONE;
+    private final List<CompressionUpdateListener> compressionUpdateListeners = new ArrayList<>();
+
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
             Boolean enableReduction, String type, String tags) {
@@ -601,6 +606,13 @@ public class Superstream {
                         this.reductionEnabled = false;
                     }
                     break;
+                case "CompressionUpdate":
+                    this.compressionEnabled = (Boolean) payload.get("enable_compression");
+                    String compressionTypeString = (String) payload.get("compression_type");
+                    this.compressionType = CompressionType.forName(compressionTypeString);
+
+                    notifyCompressionUpdate();
+                    break;
             }
         } catch (Exception e) {
             handleError(("processUpdate: " + e.getMessage()));
@@ -955,5 +967,27 @@ public class Superstream {
         if (!partitions.contains(partition)) {
             partitions.add(partition);
         }
+    }
+
+    public void addCompressionUpdateListener(CompressionUpdateListener listener) {
+        compressionUpdateListeners.add(listener);
+    }
+
+    public void removeCompressionUpdateListener(CompressionUpdateListener listener) {
+        compressionUpdateListeners.remove(listener);
+    }
+
+    private void notifyCompressionUpdate() {
+        for (CompressionUpdateListener listener : compressionUpdateListeners) {
+            listener.onCompressionUpdate(compressionEnabled, compressionType);
+        }
+    }
+
+    public boolean isCompressionEnabled() {
+        return compressionEnabled;
+    }
+
+    public String getCompressionType() {
+        return compressionType;
     }
 }
