@@ -29,6 +29,9 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -82,6 +85,7 @@ public class Superstream {
     public Boolean superstreamReady = false;
     private String tags = "";
     public Boolean canStart = false;
+    private CompressionUpdateCallback compressionUpdateCallback;
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
             Boolean enableReduction, String type, String tags) {
@@ -128,6 +132,14 @@ public class Superstream {
             executorService.shutdown();
         } catch (Exception e) {
         }
+    }
+
+    public void setCompressionUpdateCallback(CompressionUpdateCallback callback) {
+        this.compressionUpdateCallback = callback;
+    }
+
+    public interface CompressionUpdateCallback {
+        void onCompressionUpdate(boolean enabled, String type);
     }
 
     private void initializeNatsConnection(String token, String host) {
@@ -601,6 +613,13 @@ public class Superstream {
                         this.reductionEnabled = false;
                     }
                     break;
+                case "CompressionUpdate":
+                    Boolean enableCompression = (Boolean) payload.get("enable_compression");
+                    String compressionType = (String) payload.get("compression_type");
+                    if (compressionUpdateCallback != null) {
+                        compressionUpdateCallback.onCompressionUpdate(enableCompression, compressionType);
+                    }
+                    break;
             }
         } catch (Exception e) {
             handleError(("processUpdate: " + e.getMessage()));
@@ -882,6 +901,9 @@ public class Superstream {
                                 SuperstreamSerializer.class.getName());
                     }
                 }
+                properties.put("superstream.producer.creator",
+                        (java.util.function.Function<Properties, Producer<?, ?>>) KafkaProducer::new);
+
                 break;
             case "consumer":
                 if (interceptors != null && !interceptors.isEmpty()) {

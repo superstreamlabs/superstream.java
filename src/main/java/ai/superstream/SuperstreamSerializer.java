@@ -2,7 +2,9 @@ package ai.superstream;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Properties;
 
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
@@ -13,6 +15,8 @@ import ai.superstream.Superstream.JsonToProtoResult;
 public class SuperstreamSerializer<T> implements Serializer<T> {
     private Serializer<T> originalSerializer;
     private Superstream superstreamConnection;
+    private volatile String compressionType = "zstd";
+    private Producer<?, ?> producer;
 
     public SuperstreamSerializer() {
     }
@@ -51,13 +55,26 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             }
             System.out.println(errMsg);
         }
+        java.util.function.Function<Properties, Producer<?, ?>> producerCreator =
+                (java.util.function.Function<Properties, Producer<?, ?>>) configs.get("superstream.producer.creator");
+
+        if (producerCreator != null) {
+            Properties props = new Properties();
+            props.putAll(configs);
+            this.producer = producerCreator.apply(props);
+        }
+
+        if (this.superstreamConnection != null) {
+            this.superstreamConnection.setCompressionUpdateCallback(this::onCompressionUpdate);
+        }
+    }
+
+    private void onCompressionUpdate(boolean enabled, String type) {
+        this.compressionType = enabled ? type : "none";
     }
 
     @Override
     public byte[] serialize(String topic, T data) {
-        if (originalSerializer == null) {
-            return null;
-        }
         byte[] serializedData = originalSerializer.serialize(topic, data);
         return serializedData;
     }
@@ -73,27 +90,31 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             return null;
         }
         if (superstreamConnection != null && superstreamConnection.superstreamReady) {
-            if (superstreamConnection.reductionEnabled == true) {
+            if (superstreamConnection.reductionEnabled) {
                 if (superstreamConnection.descriptor != null) {
                     try {
                         JsonToProtoResult jsonToProtoResult = superstreamConnection.jsonToProto(serializedData);
-                        if (jsonToProtoResult.isSuccess()){
+                        if (jsonToProtoResult.isSuccess()) {
                             byte[] superstreamSerialized = jsonToProtoResult.getMessageBytes();
                             superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
-                            superstreamConnection.clientCounters
-                            .incrementTotalBytesAfterReduction(superstreamSerialized.length);
+
+                            // Применяем сжатие к сериализованным данным
+                            byte[] compressedData = compressData(superstreamSerialized);
+
+                            superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(compressedData.length);
                             superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
-                            serializedResult = superstreamSerialized;
-                            Header header = new RecordHeader("superstream_schema",
-                                    superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
-                                    headers.add(header);
+                            serializedResult = compressedData;
+                            headers.add(new RecordHeader("superstream_schema",
+                                    superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8)));
+                            headers.add(new RecordHeader("superstream.compression.type",
+                                    compressionType.getBytes(StandardCharsets.UTF_8)));
                         } else {
                             serializedResult = serializedData;
                             superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
                         }
                     } catch (Exception e) {
                         serializedResult = serializedData;
-                        superstreamConnection.handleError(String.format("error serializing data: ", e.getMessage()));
+                        superstreamConnection.handleError(String.format("error serializing data: %s", e.getMessage()));
                         superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
                         superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
                     }
@@ -117,6 +138,28 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
         }
         return serializedResult;
     }
+
+    private byte[] compressData(byte[] data) {
+        if ("none".equals(compressionType)) {
+            return data;
+        }
+        try {
+            switch (compressionType) {
+                case "zstd":
+                    return compressZstd(data);
+                default:
+                    return data;
+            }
+        } catch (Exception e) {
+            superstreamConnection.handleError(String.format("Error compressing data: %s", e.getMessage()));
+            return data;
+        }
+    }
+
+    private byte[] compressZstd(byte[] data) {
+        return Zstd.compress(data);
+    }
+
 
     @Override
     public void close() {
