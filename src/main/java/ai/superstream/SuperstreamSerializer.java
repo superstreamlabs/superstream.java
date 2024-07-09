@@ -15,7 +15,7 @@ import ai.superstream.Superstream.JsonToProtoResult;
 public class SuperstreamSerializer<T> implements Serializer<T> {
     private Serializer<T> originalSerializer;
     private Superstream superstreamConnection;
-    private volatile String compressionType = "zstd";
+    private volatile String compressionType = "none";
     private Producer<?, ?> producer;
 
     public SuperstreamSerializer() {
@@ -80,6 +80,64 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
     }
 
     @Override
+//    public byte[] serialize(String topic, Headers headers, T data) {
+//        if (originalSerializer == null) {
+//            return null;
+//        }
+//        byte[] serializedData = this.originalSerializer.serialize(topic, headers, data);
+//        byte[] serializedResult;
+//        if (serializedData == null) {
+//            return null;
+//        }
+//        if (superstreamConnection != null && superstreamConnection.superstreamReady) {
+//            if (superstreamConnection.reductionEnabled) {
+//                if (superstreamConnection.descriptor != null) {
+//                    try {
+//                        JsonToProtoResult jsonToProtoResult = superstreamConnection.jsonToProto(serializedData);
+//                        if (jsonToProtoResult.isSuccess()) {
+//                            byte[] superstreamSerialized = jsonToProtoResult.getMessageBytes();
+//                            superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
+//
+//                            byte[] compressedData = compressData(superstreamSerialized);
+//
+//                            superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(compressedData.length);
+//                            superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
+//                            serializedResult = compressedData;
+//                            headers.add(new RecordHeader("superstream_schema",
+//                                    superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8)));
+//                            headers.add(new RecordHeader("superstream.compression.type",
+//                                    compressionType.getBytes(StandardCharsets.UTF_8)));
+//                        } else {
+//                            serializedResult = serializedData;
+//                            superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
+//                        }
+//                    } catch (Exception e) {
+//                        serializedResult = serializedData;
+//                        superstreamConnection.handleError(String.format("error serializing data: %s", e.getMessage()));
+//                        superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
+//                        superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
+//                    }
+//                } else {
+//                    serializedResult = serializedData;
+//                    superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
+//                    if (superstreamConnection.learningFactorCounter <= superstreamConnection.learningFactor) {
+//                        superstreamConnection.sendLearningMessage(serializedResult);
+//                        superstreamConnection.learningFactorCounter++;
+//                    } else if (!superstreamConnection.learningRequestSent) {
+//                        superstreamConnection.sendRegisterSchemaReq();
+//                    }
+//                }
+//            } else {
+//                serializedResult = serializedData;
+//                superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
+//                superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
+//            }
+//        } else {
+//            serializedResult = serializedData;
+//        }
+//        return serializedResult;
+//    }
+
     public byte[] serialize(String topic, Headers headers, T data) {
         if (originalSerializer == null) {
             return null;
@@ -90,31 +148,27 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             return null;
         }
         if (superstreamConnection != null && superstreamConnection.superstreamReady) {
-            if (superstreamConnection.reductionEnabled) {
+            if (superstreamConnection.reductionEnabled == true) {
                 if (superstreamConnection.descriptor != null) {
                     try {
                         JsonToProtoResult jsonToProtoResult = superstreamConnection.jsonToProto(serializedData);
-                        if (jsonToProtoResult.isSuccess()) {
+                        if (jsonToProtoResult.isSuccess()){
                             byte[] superstreamSerialized = jsonToProtoResult.getMessageBytes();
                             superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
-
-                            // Применяем сжатие к сериализованным данным
-                            byte[] compressedData = compressData(superstreamSerialized);
-
-                            superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(compressedData.length);
+                            superstreamConnection.clientCounters
+                                    .incrementTotalBytesAfterReduction(superstreamSerialized.length);
                             superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
-                            serializedResult = compressedData;
-                            headers.add(new RecordHeader("superstream_schema",
-                                    superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8)));
-                            headers.add(new RecordHeader("superstream.compression.type",
-                                    compressionType.getBytes(StandardCharsets.UTF_8)));
+                            serializedResult = superstreamSerialized;
+                            Header header = new RecordHeader("superstream_schema",
+                                    superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
+                            headers.add(header);
                         } else {
                             serializedResult = serializedData;
                             superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
                         }
                     } catch (Exception e) {
                         serializedResult = serializedData;
-                        superstreamConnection.handleError(String.format("error serializing data: %s", e.getMessage()));
+                        superstreamConnection.handleError(String.format("error serializing data: ", e.getMessage()));
                         superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedData.length);
                         superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
                     }
@@ -133,6 +187,13 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                 superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
                 superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
             }
+
+            if (!"none".equals(compressionType)) {
+                serializedResult = compressData(serializedResult);
+                headers.add(new RecordHeader("superstream.compression.type",
+                        compressionType.getBytes(StandardCharsets.UTF_8)));
+            }
+
         } else {
             serializedResult = serializedData;
         }

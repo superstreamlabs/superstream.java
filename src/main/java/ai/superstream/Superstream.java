@@ -613,6 +613,7 @@ public class Superstream {
                         this.reductionEnabled = false;
                     }
                     break;
+
                 case "CompressionUpdate":
                     Boolean enableCompression = (Boolean) payload.get("enable_compression");
                     String compressionType = (String) payload.get("compression_type");
