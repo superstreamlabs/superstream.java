@@ -89,7 +89,6 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
     }
 
     @Override
-    @Override
     public byte[] serialize(String topic, Headers headers, T data) {
         if (originalSerializer == null) {
             return null;
