@@ -22,7 +22,6 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -82,6 +81,8 @@ public class Superstream {
     public Boolean superstreamReady = false;
     private String tags = "";
     public Boolean canStart = false;
+    private CompressionUpdateCallback compressionUpdateCallback;
+    public Boolean compressionEnabled;
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
             Boolean enableReduction, String type, String tags) {
@@ -92,6 +93,7 @@ public class Superstream {
         this.reductionEnabled = enableReduction;
         this.type = type;
         this.tags = tags;
+        this.compressionEnabled = getBooleanEnv("SUPERSTREAM_COMPRESSION_ENABLED", false);
     }
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
@@ -128,6 +130,19 @@ public class Superstream {
             executorService.shutdown();
         } catch (Exception e) {
         }
+    }
+
+    public void setCompressionUpdateCallback(CompressionUpdateCallback callback) {
+        this.compressionUpdateCallback = callback;
+    }
+
+    private Boolean getBooleanEnv(String key, Boolean defaultValue) {
+        String value = System.getenv(key);
+        return (value != null) ? Boolean.parseBoolean(value) : defaultValue;
+    }
+
+    public interface CompressionUpdateCallback {
+        void onCompressionUpdate(boolean enabled, String type);
     }
 
     private void initializeNatsConnection(String token, String host) {
@@ -599,6 +614,14 @@ public class Superstream {
                         this.reductionEnabled = true;
                     } else {
                         this.reductionEnabled = false;
+                    }
+                    break;
+
+                case "CompressionUpdate":
+                    Boolean enableCompression = (Boolean) payload.get("enable_compression");
+                    String compressionType = (String) payload.get("compression_type");
+                    if (compressionUpdateCallback != null) {
+                        compressionUpdateCallback.onCompressionUpdate(enableCompression, compressionType);
                     }
                     break;
             }
