@@ -117,7 +117,6 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                 }
             }
 
-            // Apply compression independent of reduction
             if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {
                 serializedResult = compressData(serializedResult);
                 if (!"none".equals(compressionType)) {
