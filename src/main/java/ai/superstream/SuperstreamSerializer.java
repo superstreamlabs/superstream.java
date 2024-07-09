@@ -18,7 +18,6 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
     private Serializer<T> originalSerializer;
     private Superstream superstreamConnection;
     private volatile String compressionType = "none";
-    private Producer<?, ?> producer;
     private boolean producerCompressionEnabled = false;
 
     public SuperstreamSerializer() {
@@ -54,15 +53,6 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             String configuredCompressionType = (String) configs.get(ProducerConfig.COMPRESSION_TYPE_CONFIG);
             this.producerCompressionEnabled = configuredCompressionType != null && !configuredCompressionType.equals("none");
 
-            @SuppressWarnings("unchecked")
-            java.util.function.Function<Properties, Producer<?, ?>> producerCreator =
-                    (java.util.function.Function<Properties, Producer<?, ?>>) configs.get("superstream.producer.creator");
-
-            if (producerCreator != null) {
-                Properties props = new Properties();
-                props.putAll(configs);
-                this.producer = producerCreator.apply(props);
-            }
             if (this.superstreamConnection != null) {
                 this.superstreamConnection.setCompressionUpdateCallback(this::onCompressionUpdate);
             }

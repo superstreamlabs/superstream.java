@@ -909,9 +909,6 @@ public class Superstream {
                                 SuperstreamSerializer.class.getName());
                     }
                 }
-                properties.put("superstream.producer.creator",
-                        (java.util.function.Function<Properties, Producer<?, ?>>) KafkaProducer::new);
-
                 break;
             case "consumer":
                 if (interceptors != null && !interceptors.isEmpty()) {
