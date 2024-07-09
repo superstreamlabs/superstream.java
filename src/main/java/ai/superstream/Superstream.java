@@ -86,6 +86,7 @@ public class Superstream {
     private String tags = "";
     public Boolean canStart = false;
     private CompressionUpdateCallback compressionUpdateCallback;
+    public Boolean compressionEnabled;
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
             Boolean enableReduction, String type, String tags) {
@@ -96,6 +97,7 @@ public class Superstream {
         this.reductionEnabled = enableReduction;
         this.type = type;
         this.tags = tags;
+        this.compressionEnabled = getBooleanEnv("SUPERSTREAM_COMPRESSION_ENABLED", false);
     }
 
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
@@ -136,6 +138,11 @@ public class Superstream {
 
     public void setCompressionUpdateCallback(CompressionUpdateCallback callback) {
         this.compressionUpdateCallback = callback;
+    }
+
+    private Boolean getBooleanEnv(String key, Boolean defaultValue) {
+        String value = System.getenv(key);
+        return (value != null) ? Boolean.parseBoolean(value) : defaultValue;
     }
 
     public interface CompressionUpdateCallback {
