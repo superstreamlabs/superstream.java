@@ -98,24 +98,16 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
         if (serializedData == null) {
             return null;
         }
+
         if (superstreamConnection != null && superstreamConnection.superstreamReady) {
-            if (superstreamConnection.reductionEnabled == true) {
+            if (superstreamConnection.reductionEnabled) {
                 if (superstreamConnection.descriptor != null) {
                     try {
                         JsonToProtoResult jsonToProtoResult = superstreamConnection.jsonToProto(serializedData);
                         if (jsonToProtoResult.isSuccess()){
                             byte[] superstreamSerialized = jsonToProtoResult.getMessageBytes();
                             superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
-
-                            // Применяем сжатие только если оно включено и не настроено производителем
-                            if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {
-                                serializedResult = compressData(superstreamSerialized);
-                                headers.add(new RecordHeader("superstream.compression.type",
-                                        compressionType.getBytes(StandardCharsets.UTF_8)));
-                            } else {
-                                serializedResult = superstreamSerialized;
-                            }
-
+                            serializedResult = superstreamSerialized;
                             superstreamConnection.clientCounters
                                     .incrementTotalBytesAfterReduction(serializedResult.length);
                             superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
@@ -146,6 +138,12 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                 serializedResult = serializedData;
                 superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
                 superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
+            }
+
+            if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {
+                serializedResult = compressData(serializedResult);
+                headers.add(new RecordHeader("superstream.compression.type",
+                        compressionType.getBytes(StandardCharsets.UTF_8)));
             }
         } else {
             serializedResult = serializedData;
