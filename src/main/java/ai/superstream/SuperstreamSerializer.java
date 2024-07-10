@@ -122,6 +122,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                 if (!"none".equals(compressionType)) {
                     headers.add(new RecordHeader("superstream.compression.type",
                             compressionType.getBytes(StandardCharsets.UTF_8)));
+                    headers.add(new RecordHeader("compression", "zstd".getBytes(StandardCharsets.UTF_8)));
                 }
             }
 
