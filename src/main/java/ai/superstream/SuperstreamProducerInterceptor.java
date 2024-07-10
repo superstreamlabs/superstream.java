@@ -20,19 +20,6 @@ public class SuperstreamProducerInterceptor<K, V> implements ProducerInterceptor
                 this.superstreamConnection.updateTopicPartitions(record.topic(), record.partition());
             }
         }
-
-        String compressionType = null;
-        assert record != null;
-        for (Header header : record.headers()) {
-            if ("superstream.compression.type".equals(header.key())) {
-                compressionType = new String(header.value(), StandardCharsets.UTF_8);
-                break;
-            }
-        }
-        if (compressionType != null && !"none".equals(compressionType)) {
-            record.headers().remove("compression.type");
-            record.headers().add("compression.type", compressionType.getBytes(StandardCharsets.UTF_8));
-        }
         return record;
     }
 
