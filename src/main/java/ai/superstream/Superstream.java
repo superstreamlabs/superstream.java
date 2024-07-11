@@ -620,6 +620,7 @@ public class Superstream {
                 case "CompressionUpdate":
                     Boolean enableCompression = (Boolean) payload.get("enable_compression");
                     String compressionType = (String) payload.get("compression_type");
+                    this.compressionEnabled = enableCompression;
                     if (compressionUpdateCallback != null) {
                         compressionUpdateCallback.onCompressionUpdate(enableCompression, compressionType);
                     }
