@@ -3,8 +3,6 @@ package ai.superstream;
 public class SuperstreamCounters {
     public long TotalBytesBeforeReduction = 0;
     public long TotalBytesAfterReduction = 0;
-    public long TotalBytesBeforeCompression = 0;
-    public long TotalBytesAfterCompression = 0;
     public int TotalMessagesSuccessfullyProduce = 0;
     public int TotalMessagesSuccessfullyConsumed = 0;
     public int TotalMessagesFailedProduce = 0;
@@ -28,14 +26,6 @@ public class SuperstreamCounters {
 
     public void incrementTotalBytesAfterReduction(long bytes) {
         TotalBytesAfterReduction += bytes;
-    }
-
-    public void incrementTotalBytesBeforeCompression(long bytes) {
-        TotalBytesBeforeCompression += bytes;
-    }
-
-    public void incrementTotalBytesAfterCompression(long bytes) {
-        TotalBytesAfterCompression += bytes;
     }
 
     public void incrementTotalMessagesSuccessfullyProduce() {
