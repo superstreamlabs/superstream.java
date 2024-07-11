@@ -117,10 +117,13 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                 }
             }
 
+
             if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {
+                superstreamConnection.clientCounters.incrementTotalBytesBeforeCompression(serializedResult.length);
                 compressionType = "zstd";
                 serializedResult = compressData(serializedResult);
                 headers.add(new RecordHeader("compression", compressionType.getBytes(StandardCharsets.UTF_8)));
+                superstreamConnection.clientCounters.incrementTotalBytesAfterCompression(serializedResult.length);
             }
 
             superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedResult.length);
