@@ -118,9 +118,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             }
 
             if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {
-                compressionType = "zstd";
-                serializedResult = compressData(serializedResult);
-                headers.add(new RecordHeader("compression", compressionType.getBytes(StandardCharsets.UTF_8)));
+                headers.add(new RecordHeader("superstream-compression", "on".getBytes(StandardCharsets.UTF_8)));
             }
 
             superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedResult.length);
@@ -128,29 +126,6 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
 
         return serializedResult;
     }
-
-    private byte[] compressData(byte[] data) {
-        if ("none".equals(compressionType)) {
-            return data;
-        }
-        try {
-            switch (compressionType) {
-                case "zstd":
-                    return Zstd.compress(data);
-                default:
-                    superstreamConnection.handleError("Unsupported compression type: " + compressionType);
-                    return data;
-            }
-        } catch (Exception e) {
-            superstreamConnection.handleError(String.format("Error compressing data: %s", e.getMessage()));
-            return data;
-        }
-    }
-
-    private byte[] compressZstd(byte[] data) {
-        return Zstd.compress(data);
-    }
-
 
     @Override
     public void close() {
