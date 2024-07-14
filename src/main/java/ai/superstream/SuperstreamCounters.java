@@ -1,11 +1,19 @@
 package ai.superstream;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class SuperstreamCounters {
+    @JsonProperty("total_bytes_before_reduction")
     public long TotalBytesBeforeReduction = 0;
+    @JsonProperty("total_bytes_after_reduction")
     public long TotalBytesAfterReduction = 0;
+    @JsonProperty("total_messages_successfully_produce")
     public int TotalMessagesSuccessfullyProduce = 0;
+    @JsonProperty("total_messages_successfully_consume")
     public int TotalMessagesSuccessfullyConsumed = 0;
+    @JsonProperty("total_messages_failed_produce")
     public int TotalMessagesFailedProduce = 0;
+    @JsonProperty("total_messages_failed_consume")
     public int TotalMessagesFailedConsume = 0;
 
     public SuperstreamCounters() {
