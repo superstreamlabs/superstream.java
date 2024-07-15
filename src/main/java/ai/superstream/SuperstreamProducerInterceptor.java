@@ -26,9 +26,13 @@ public class SuperstreamProducerInterceptor<K, V> implements ProducerInterceptor
     @Override
     public void onAcknowledgement(RecordMetadata metadata, Exception exception) {
         if (this.superstreamConnection != null && metadata != null) {
-            int serializedValueSize = metadata.serializedValueSize();
-            if (serializedValueSize > 0) {
-                this.superstreamConnection.incrementTotalBytesAfterReduction(serializedValueSize);
+            if (exception == null) {
+                int serializedValueSize = metadata.serializedValueSize();
+                if (serializedValueSize > 0) {
+                    this.superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedValueSize);
+                }
+            } else {
+                this.superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
             }
         }
     }

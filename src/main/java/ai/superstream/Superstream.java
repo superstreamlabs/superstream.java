@@ -145,10 +145,6 @@ public class Superstream {
         void onCompressionUpdate(boolean enabled, String type);
     }
 
-    public void incrementTotalBytesAfterReduction(int bytes) {
-        this.clientCounters.incrementTotalBytesAfterReduction(bytes);
-    }
-
     private void initializeNatsConnection(String token, String host) {
         try {
             Options options = new Options.Builder()

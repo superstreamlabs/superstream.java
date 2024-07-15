@@ -120,8 +120,6 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
             if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {
                 headers.add(new RecordHeader("superstream-compression", "on".getBytes(StandardCharsets.UTF_8)));
             }
-
-            superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(serializedResult.length);
         }
 
         return serializedResult;
