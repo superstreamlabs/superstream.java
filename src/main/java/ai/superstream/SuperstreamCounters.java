@@ -1,12 +1,13 @@
 package ai.superstream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class SuperstreamCounters {
     @JsonProperty("total_bytes_before_reduction")
-    public long TotalBytesBeforeReduction = 0;
+    public AtomicLong TotalBytesBeforeReduction = new AtomicLong(0);
     @JsonProperty("total_bytes_after_reduction")
-    public long TotalBytesAfterReduction = 0;
+    public AtomicLong TotalBytesAfterReduction = new AtomicLong(0);
     @JsonProperty("total_messages_successfully_produce")
     public int TotalMessagesSuccessfullyProduce = 0;
     @JsonProperty("total_messages_successfully_consume")
@@ -15,13 +16,16 @@ public class SuperstreamCounters {
     public int TotalMessagesFailedProduce = 0;
     @JsonProperty("total_messages_failed_consume")
     public int TotalMessagesFailedConsume = 0;
+    @JsonProperty("total_serialization_reduced")
+    public AtomicLong TotalSSMPayloadReduced = new AtomicLong(0);
 
     public SuperstreamCounters() {
     }
 
     public void reset() {
-        TotalBytesBeforeReduction = 0;
-        TotalBytesAfterReduction = 0;
+        TotalBytesBeforeReduction = new AtomicLong(0);
+        TotalBytesAfterReduction = new AtomicLong(0);
+        TotalSSMPayloadReduced = new AtomicLong(0);
         TotalMessagesSuccessfullyProduce = 0;
         TotalMessagesSuccessfullyConsumed = 0;
         TotalMessagesFailedProduce = 0;
@@ -29,15 +33,24 @@ public class SuperstreamCounters {
     }
 
     public void incrementTotalBytesBeforeReduction(long bytes) {
-        TotalBytesBeforeReduction += bytes;
+        TotalBytesBeforeReduction.addAndGet(bytes);
     }
 
     public void incrementTotalBytesAfterReduction(long bytes) {
-        TotalBytesAfterReduction += bytes;
+        TotalBytesAfterReduction.addAndGet(bytes);
+    }
+
+    public void incrementTotalSSMPayloadReduced(long bytes) {
+        TotalSSMPayloadReduced.addAndGet(bytes);
     }
 
     public void incrementTotalMessagesSuccessfullyProduce() {
         TotalMessagesSuccessfullyProduce++;
+    }
+
+    public void sumTotalBeforeReductionTotalSSMPayloadReduced() {
+        long valueToAdd = TotalSSMPayloadReduced.getAndSet(0);
+        TotalBytesBeforeReduction.addAndGet(valueToAdd);
     }
 
     public void incrementTotalMessagesSuccessfullyConsumed() {
@@ -53,11 +66,11 @@ public class SuperstreamCounters {
     }
 
     public long getTotalBytesBeforeReduction() {
-        return TotalBytesBeforeReduction;
+        return TotalBytesBeforeReduction.get();
     }
 
     public long getTotalBytesAfterReduction() {
-        return TotalBytesAfterReduction;
+        return TotalBytesAfterReduction.get();
     }
 
     public int getTotalMessagesSuccessfullyProduce() {
@@ -77,11 +90,11 @@ public class SuperstreamCounters {
     }
 
     public void setTotalBytesBeforeReduction(long totalBytesBeforeReduction) {
-        TotalBytesBeforeReduction = totalBytesBeforeReduction;
+        TotalBytesBeforeReduction = new AtomicLong(totalBytesBeforeReduction);
     }
 
     public void setTotalBytesAfterReduction(long totalBytesAfterReduction) {
-        TotalBytesAfterReduction = totalBytesAfterReduction;
+        TotalBytesAfterReduction = new AtomicLong(totalBytesAfterReduction);
     }
 
     public void setTotalMessagesSuccessfullyProduce(int totalMessagesSuccessfullyProduce) {

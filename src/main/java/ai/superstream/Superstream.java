@@ -456,6 +456,7 @@ public class Superstream {
         singleExecutorService.scheduleAtFixedRate(() -> {
             try {
                 if (brokerConnection != null && superstreamReady){
+                    clientCounters.sumTotalBeforeReductionTotalSSMPayloadReduced();
                     byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
                     Map<String, Object> topicPartitionConfig = new HashMap<>();
                     if (!topicPartitions.isEmpty()) {
