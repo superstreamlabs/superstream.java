@@ -92,7 +92,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
         }
 
         if (superstreamConnection != null && superstreamConnection.superstreamReady) {
-            superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(serializedData.length);
+            int inputLength = serializedData.length;
 
             if (superstreamConnection.reductionEnabled && superstreamConnection.descriptor != null) {
                 try {
@@ -108,6 +108,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                     superstreamConnection.handleError(String.format("error serializing data: %s", e.getMessage()));
                     superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
                 }
+                superstreamConnection.clientCounters.incrementTotalSerializationReduced(inputLength - serializedResult.length);
             } else if (superstreamConnection.reductionEnabled) {
                 if (superstreamConnection.learningFactorCounter <= superstreamConnection.learningFactor) {
                     superstreamConnection.sendLearningMessage(serializedData);
@@ -115,6 +116,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                 } else if (!superstreamConnection.learningRequestSent) {
                     superstreamConnection.sendRegisterSchemaReq();
                 }
+                superstreamConnection.clientCounters.incrementTotalSerializationReduced(inputLength - serializedResult.length);
             }
 
             if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {
