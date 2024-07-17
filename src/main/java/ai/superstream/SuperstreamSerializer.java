@@ -2,10 +2,7 @@ package ai.superstream;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Properties;
 
-import com.github.luben.zstd.Zstd;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -108,7 +105,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                     superstreamConnection.handleError(String.format("error serializing data: %s", e.getMessage()));
                     superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
                 }
-                superstreamConnection.clientCounters.incrementTotalSerializationReduced(inputLength - serializedResult.length);
+                superstreamConnection.clientCounters.incrementTotalSSMPayloadReduced(inputLength - serializedResult.length);
             } else if (superstreamConnection.reductionEnabled) {
                 if (superstreamConnection.learningFactorCounter <= superstreamConnection.learningFactor) {
                     superstreamConnection.sendLearningMessage(serializedData);
@@ -116,7 +113,7 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                 } else if (!superstreamConnection.learningRequestSent) {
                     superstreamConnection.sendRegisterSchemaReq();
                 }
-                superstreamConnection.clientCounters.incrementTotalSerializationReduced(inputLength - serializedResult.length);
+                superstreamConnection.clientCounters.incrementTotalSSMPayloadReduced(inputLength - serializedResult.length);
             }
 
             if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {

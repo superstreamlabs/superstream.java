@@ -17,7 +17,7 @@ public class SuperstreamCounters {
     @JsonProperty("total_messages_failed_consume")
     public int TotalMessagesFailedConsume = 0;
     @JsonProperty("total_serialization_reduced")
-    public AtomicLong TotalSerializationReduced = new AtomicLong(0);
+    public AtomicLong TotalSSMPayloadReduced = new AtomicLong(0);
 
     public SuperstreamCounters() {
     }
@@ -25,7 +25,7 @@ public class SuperstreamCounters {
     public void reset() {
         TotalBytesBeforeReduction = new AtomicLong(0);
         TotalBytesAfterReduction = new AtomicLong(0);
-        TotalSerializationReduced = new AtomicLong(0);
+        TotalSSMPayloadReduced = new AtomicLong(0);
         TotalMessagesSuccessfullyProduce = 0;
         TotalMessagesSuccessfullyConsumed = 0;
         TotalMessagesFailedProduce = 0;
@@ -40,16 +40,16 @@ public class SuperstreamCounters {
         TotalBytesAfterReduction.addAndGet(bytes);
     }
 
-    public void incrementTotalSerializationReduced(long bytes) {
-        TotalSerializationReduced.addAndGet(bytes);
+    public void incrementTotalSSMPayloadReduced(long bytes) {
+        TotalSSMPayloadReduced.addAndGet(bytes);
     }
 
     public void incrementTotalMessagesSuccessfullyProduce() {
         TotalMessagesSuccessfullyProduce++;
     }
 
-    public void sumTotalBeforeReductionTotalSerializationReduced() {
-        long valueToAdd = TotalSerializationReduced.getAndSet(0);
+    public void sumTotalBeforeReductionTotalSSMPayloadReduced() {
+        long valueToAdd = TotalSSMPayloadReduced.getAndSet(0);
         TotalBytesBeforeReduction.addAndGet(valueToAdd);
     }
 
