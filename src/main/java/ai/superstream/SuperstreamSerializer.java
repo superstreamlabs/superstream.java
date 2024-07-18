@@ -96,16 +96,20 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                     JsonToProtoResult jsonToProtoResult = superstreamConnection.jsonToProto(serializedData);
                     if (jsonToProtoResult.isSuccess()) {
                         serializedResult = jsonToProtoResult.getMessageBytes();
-                        superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyProduce();
+                        superstreamConnection.updateClientCounters(counters ->
+                                counters.incrementTotalMessagesSuccessfullyProduce());
                         Header header = new RecordHeader("superstream_schema",
                                 superstreamConnection.ProducerSchemaID.getBytes(StandardCharsets.UTF_8));
                         headers.add(header);
                     }
                 } catch (Exception e) {
                     superstreamConnection.handleError(String.format("error serializing data: %s", e.getMessage()));
-                    superstreamConnection.clientCounters.incrementTotalMessagesFailedProduce();
+                    superstreamConnection.updateClientCounters(counters ->
+                            counters.incrementTotalMessagesFailedProduce());
                 }
-                superstreamConnection.clientCounters.incrementTotalSSMPayloadReduced(inputLength - serializedResult.length);
+                long reducedBytes = inputLength - serializedResult.length;
+                superstreamConnection.updateClientCounters(counters ->
+                        counters.incrementTotalSSMPayloadReduced(reducedBytes));
             } else if (superstreamConnection.reductionEnabled) {
                 if (superstreamConnection.learningFactorCounter <= superstreamConnection.learningFactor) {
                     superstreamConnection.sendLearningMessage(serializedData);
@@ -113,7 +117,6 @@ public class SuperstreamSerializer<T> implements Serializer<T> {
                 } else if (!superstreamConnection.learningRequestSent) {
                     superstreamConnection.sendRegisterSchemaReq();
                 }
-                superstreamConnection.clientCounters.incrementTotalSSMPayloadReduced(inputLength - serializedResult.length);
             }
 
             if (superstreamConnection.compressionEnabled && !producerCompressionEnabled) {

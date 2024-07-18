@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.function.Consumer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.Properties;
 import java.util.Set;
@@ -84,6 +86,9 @@ public class Superstream {
     private CompressionUpdateCallback compressionUpdateCallback;
     public Boolean compressionEnabled;
 
+    private final ConcurrentHashMap<String, AtomicReference<SuperstreamCounters>> clientCountersMap = new ConcurrentHashMap<>();
+
+
     public Superstream(String token, String host, Integer learningFactor, Map<String, Object> configs,
             Boolean enableReduction, String type, String tags) {
         this.learningFactor = learningFactor;
@@ -134,6 +139,18 @@ public class Superstream {
 
     public void setCompressionUpdateCallback(CompressionUpdateCallback callback) {
         this.compressionUpdateCallback = callback;
+    }
+
+    private SuperstreamCounters getOrCreateClientCounters() {
+        return clientCountersMap.computeIfAbsent(clientHash, k -> new AtomicReference<>(new SuperstreamCounters()))
+                .get();
+    }
+
+    public void updateClientCounters(Consumer<SuperstreamCounters> updateFunction) {
+        clientCountersMap.get(clientHash).updateAndGet(counters -> {
+            updateFunction.accept(counters);
+            return counters;
+        });
     }
 
     private Boolean getBooleanEnv(String key, Boolean defaultValue) {
@@ -457,9 +474,12 @@ public class Superstream {
             try {
                 if (brokerConnection != null && superstreamReady){
                     byte[] byteCounters = new byte[0];
-                    synchronized (clientCounters) {
-                        clientCounters.sumTotalBeforeReductionTotalSSMPayloadReduced();
-                        byteCounters = objectMapper.writeValueAsBytes(clientCounters);
+                    AtomicReference<SuperstreamCounters> countersRef = clientCountersMap.get(clientHash);
+                    if (countersRef != null) {
+                        SuperstreamCounters currentCounters = countersRef.get();
+                        if (currentCounters != null) {
+                            byteCounters = objectMapper.writeValueAsBytes(currentCounters);
+                        }
                     }
 
                     Map<String, Object> topicPartitionConfig = new HashMap<>();
