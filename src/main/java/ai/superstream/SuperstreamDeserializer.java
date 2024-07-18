@@ -77,9 +77,10 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
             this.originalDeserializer.deserialize(topic, headers, dataToDesrialize);
         }
 
-        
         if (this.superstreamConnection != null) {
-            this.superstreamConnection.clientCounters.incrementTotalBytesAfterReduction(data.length);
+            superstreamConnection.updateClientCounters(counters -> {
+                counters.incrementTotalBytesAfterReduction(data.length);
+            });
         }
         
         if (schemaId != null) {
@@ -112,17 +113,20 @@ public class SuperstreamDeserializer<T> implements Deserializer<T> {
             try {
                 byte[] supertstreamDeserialized = superstreamConnection.protoToJson(data, desc);
                 dataToDesrialize = supertstreamDeserialized;
-                superstreamConnection.clientCounters
-                        .incrementTotalBytesBeforeReduction(supertstreamDeserialized.length);
-                superstreamConnection.clientCounters.incrementTotalMessagesSuccessfullyConsumed();
+                superstreamConnection.updateClientCounters(counters -> {
+                    counters.incrementTotalBytesBeforeReduction(supertstreamDeserialized.length);
+                    counters.incrementTotalMessagesSuccessfullyConsumed();
+                });
             } catch (Exception e) {
                 superstreamConnection.handleError(String.format("error deserializing data: %s", e.getMessage()));
                 return null;
             }
         } else {
             if (superstreamConnection != null) {
-                superstreamConnection.clientCounters.incrementTotalBytesBeforeReduction(data.length);
-                superstreamConnection.clientCounters.incrementTotalMessagesFailedConsume();
+                superstreamConnection.updateClientCounters(counters -> {
+                    counters.incrementTotalBytesBeforeReduction(data.length);
+                    counters.incrementTotalMessagesFailedConsume();
+                });
             }
         }
         T deserializedData = this.originalDeserializer.deserialize(topic, headers, dataToDesrialize);
