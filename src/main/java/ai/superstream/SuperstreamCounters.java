@@ -1,6 +1,8 @@
 package ai.superstream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SuperstreamCounters {
@@ -9,13 +11,13 @@ public class SuperstreamCounters {
     @JsonProperty("total_bytes_after_reduction")
     public AtomicLong TotalBytesAfterReduction = new AtomicLong(0);
     @JsonProperty("total_messages_successfully_produce")
-    public int TotalMessagesSuccessfullyProduce = 0;
+    public AtomicInteger TotalMessagesSuccessfullyProduce = new AtomicInteger(0);
     @JsonProperty("total_messages_successfully_consume")
-    public int TotalMessagesSuccessfullyConsumed = 0;
+    public AtomicInteger TotalMessagesSuccessfullyConsumed = new AtomicInteger(0);
     @JsonProperty("total_messages_failed_produce")
-    public int TotalMessagesFailedProduce = 0;
+    public AtomicInteger TotalMessagesFailedProduce = new AtomicInteger(0);
     @JsonProperty("total_messages_failed_consume")
-    public int TotalMessagesFailedConsume = 0;
+    public AtomicInteger TotalMessagesFailedConsume = new AtomicInteger(0);
     @JsonProperty("total_serialization_reduced")
     public AtomicLong TotalSSMPayloadReduced = new AtomicLong(0);
 
@@ -26,10 +28,10 @@ public class SuperstreamCounters {
         TotalBytesBeforeReduction = new AtomicLong(0);
         TotalBytesAfterReduction = new AtomicLong(0);
         TotalSSMPayloadReduced = new AtomicLong(0);
-        TotalMessagesSuccessfullyProduce = 0;
-        TotalMessagesSuccessfullyConsumed = 0;
-        TotalMessagesFailedProduce = 0;
-        TotalMessagesFailedConsume = 0;
+        TotalMessagesSuccessfullyProduce = new AtomicInteger(0);
+        TotalMessagesSuccessfullyConsumed = new AtomicInteger(0);
+        TotalMessagesFailedProduce = new AtomicInteger(0);
+        TotalMessagesFailedConsume = new AtomicInteger(0);
     }
 
     public void incrementTotalBytesBeforeReduction(long bytes) {
@@ -45,7 +47,7 @@ public class SuperstreamCounters {
     }
 
     public void incrementTotalMessagesSuccessfullyProduce() {
-        TotalMessagesSuccessfullyProduce++;
+        TotalMessagesSuccessfullyProduce.incrementAndGet();
     }
 
     public void sumTotalBeforeReductionTotalSSMPayloadReduced() {
@@ -54,15 +56,15 @@ public class SuperstreamCounters {
     }
 
     public void incrementTotalMessagesSuccessfullyConsumed() {
-        TotalMessagesSuccessfullyConsumed++;
+        TotalMessagesSuccessfullyConsumed.incrementAndGet();
     }
 
     public void incrementTotalMessagesFailedProduce() {
-        TotalMessagesFailedProduce++;
+        TotalMessagesFailedProduce.incrementAndGet();
     }
 
     public void incrementTotalMessagesFailedConsume() {
-        TotalMessagesFailedConsume++;
+        TotalMessagesFailedConsume.incrementAndGet();
     }
 
     public long getTotalBytesBeforeReduction() {
@@ -74,19 +76,19 @@ public class SuperstreamCounters {
     }
 
     public int getTotalMessagesSuccessfullyProduce() {
-        return TotalMessagesSuccessfullyProduce;
+        return TotalMessagesSuccessfullyProduce.get();
     }
 
     public int getTotalMessagesSuccessfullyConsumed() {
-        return TotalMessagesSuccessfullyConsumed;
+        return TotalMessagesSuccessfullyConsumed.get();
     }
 
     public int getTotalMessagesFailedProduce() {
-        return TotalMessagesFailedProduce;
+        return TotalMessagesFailedProduce.get();
     }
 
     public int getTotalMessagesFailedConsume() {
-        return TotalMessagesFailedConsume;
+        return TotalMessagesFailedConsume.get();
     }
 
     public void setTotalBytesBeforeReduction(long totalBytesBeforeReduction) {
@@ -98,18 +100,18 @@ public class SuperstreamCounters {
     }
 
     public void setTotalMessagesSuccessfullyProduce(int totalMessagesSuccessfullyProduce) {
-        TotalMessagesSuccessfullyProduce = totalMessagesSuccessfullyProduce;
+        TotalMessagesSuccessfullyProduce.addAndGet(totalMessagesSuccessfullyProduce);
     }
 
     public void setTotalMessagesSuccessfullyConsumed(int totalMessagesSuccessfullyConsumed) {
-        TotalMessagesSuccessfullyConsumed = totalMessagesSuccessfullyConsumed;
+        TotalMessagesSuccessfullyConsumed.addAndGet(totalMessagesSuccessfullyConsumed);
     }
 
     public void setTotalMessagesFailedProduce(int totalMessagesFailedProduce) {
-        TotalMessagesFailedProduce = totalMessagesFailedProduce;
+        TotalMessagesFailedProduce.addAndGet(totalMessagesFailedProduce);
     }
 
     public void setTotalMessagesFailedConsume(int totalMessagesFailedConsume) {
-        TotalMessagesFailedConsume = totalMessagesFailedConsume;
+        TotalMessagesFailedConsume.addAndGet(totalMessagesFailedConsume);
     }
 }

@@ -69,7 +69,7 @@ public class Superstream {
     public String ConsumerSchemaID = "0";
     public Map<String, Descriptors.Descriptor> SchemaIDMap = new HashMap<>();
     public Map<String, Object> configs;
-    public SuperstreamCounters clientCounters = new SuperstreamCounters();
+    public final SuperstreamCounters clientCounters = new SuperstreamCounters();
     private Subscription updatesSubscription;
     private String host;
     private String token;
@@ -456,8 +456,12 @@ public class Superstream {
         singleExecutorService.scheduleAtFixedRate(() -> {
             try {
                 if (brokerConnection != null && superstreamReady){
-                    clientCounters.sumTotalBeforeReductionTotalSSMPayloadReduced();
-                    byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
+                    byte[] byteCounters = new byte[0];
+                    synchronized (clientCounters) {
+                        clientCounters.sumTotalBeforeReductionTotalSSMPayloadReduced();
+                        byteCounters = objectMapper.writeValueAsBytes(clientCounters);
+                    }
+
                     Map<String, Object> topicPartitionConfig = new HashMap<>();
                     if (!topicPartitions.isEmpty()) {
                         Map<String, Integer[]> topicPartitionsToSend = convertMap(topicPartitions);
