@@ -141,15 +141,16 @@ public class Superstream {
         this.compressionUpdateCallback = callback;
     }
 
-    private SuperstreamCounters getOrCreateClientCounters() {
-        return clientCountersMap.computeIfAbsent(clientHash, k -> new AtomicReference<>(new SuperstreamCounters()))
-                .get();
-    }
-
     public void updateClientCounters(Consumer<SuperstreamCounters> updateFunction) {
-        clientCountersMap.get(clientHash).updateAndGet(counters -> {
-            updateFunction.accept(counters);
-            return counters;
+        clientCountersMap.compute(clientHash, (key, counterRef) -> {
+            if (counterRef == null) {
+                counterRef = new AtomicReference<>(new SuperstreamCounters());
+            }
+            counterRef.updateAndGet(counters -> {
+                updateFunction.accept(counters);
+                return counters;
+            });
+            return counterRef;
         });
     }
 
