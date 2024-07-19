@@ -474,7 +474,7 @@ public class Superstream {
         singleExecutorService.scheduleAtFixedRate(() -> {
             try {
                 if (brokerConnection != null && superstreamReady){
-                    byte[] byteCounters = new byte[0];
+                    byte[] byteCounters = objectMapper.writeValueAsBytes(clientCounters);
                     AtomicReference<SuperstreamCounters> countersRef = clientCountersMap.get(clientHash);
                     if (countersRef != null) {
                         SuperstreamCounters currentCounters = countersRef.get();
